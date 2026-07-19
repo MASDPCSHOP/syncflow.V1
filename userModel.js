@@ -1,8 +1,4 @@
-const { pool } = require('../config/db');
-
-// All queries use parameterized placeholders ($1, $2, ...) - this is what
-// protects against SQL injection. Never build queries with string
-// concatenation/template literals of user input.
+const { pool } = require('./db');
 
 async function findByUsername(username) {
   const { rows } = await pool.query(
