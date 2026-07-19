@@ -1,13 +1,13 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const userModel = require('../models/userModel');
-const { pool } = require('../config/db');
+const userModel = require('./userModel');
+const { pool } = require('./db');
 const {
   validateUsername,
   validateEmail,
   validatePasswordStrength,
-} = require('../utils/validators');
+} = require('./validators');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -91,10 +91,6 @@ async function login(req, res) {
   }
 }
 
-// JWTs are stateless, so "logout" is mostly a client-side action (discard the
-// token). This endpoint exists so the frontend has something to call and so
-// that, if you later add a token-blacklist/refresh-token table, you have a
-// single place to revoke sessions server-side.
 async function logout(req, res) {
   return res.json({ ok: true });
 }
@@ -110,32 +106,25 @@ async function profile(req, res) {
   }
 }
 
-// Structure is ready to go: generates and stores a reset token. Actually
-// emailing it requires an email provider (SendGrid, SES, etc.) which isn't
-// configured yet - wire that up in sendResetEmail() below when ready.
 async function forgotPassword(req, res) {
   try {
     const { email } = req.body || {};
     if (!email) return res.status(400).json({ ok: false, msg: 'Email is required' });
 
     const user = await userModel.findByEmail(email.trim());
-    // Always return the same response whether or not the email exists,
-    // so this endpoint can't be used to check which emails are registered.
     if (!user) {
       return res.json({ ok: true, msg: 'If that email is registered, a reset link has been sent.' });
     }
 
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await pool.query(
       `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
        VALUES ($1, $2, $3)`,
       [user.id, tokenHash, expiresAt]
     );
-
-    // await sendResetEmail(user.email, rawToken); // TODO: hook up an email provider
 
     return res.json({ ok: true, msg: 'If that email is registered, a reset link has been sent.' });
   } catch (err) {
