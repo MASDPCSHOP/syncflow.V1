@@ -1,13 +1,12 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const authController = require('../controllers/authController');
-const { requireAuth } = require('../middleware/auth');
+const authController = require('./authController');
+const { requireAuth } = require('./auth');
 
 const router = express.Router();
 
-// Slow down brute-force login/register attempts without blocking normal use.
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
