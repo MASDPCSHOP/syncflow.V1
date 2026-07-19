@@ -3,16 +3,14 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 
-const authRoutes = require('./routes/authRoutes');
-const { testConnection } = require('./config/db');
+const authRoutes = require('./authRoutes');
+const { testConnection } = require('./db');
 
 const app = express();
 
 app.use(helmet());
 app.use(express.json({ limit: '100kb' }));
 
-// CORS_ORIGIN can be a comma-separated list, e.g.
-// "https://myapp.com,http://localhost:5500"
 const allowedOrigins = (process.env.CORS_ORIGIN || '*')
   .split(',')
   .map((o) => o.trim());
@@ -28,10 +26,8 @@ app.get('/health', (req, res) => res.json({ ok: true, service: 'syncflow-auth-ap
 
 app.use('/api/auth', authRoutes);
 
-// 404 handler
 app.use((req, res) => res.status(404).json({ ok: false, msg: 'Not found' }));
 
-// Central error handler (catches anything thrown/next(err) that wasn't handled)
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ ok: false, msg: 'Internal server error' });
