@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 
 const authRoutes = require('./authRoutes');
+const dataRoutes = require('./dataRoutes');
 const { testConnection } = require('./db');
 
 const app = express();
@@ -25,6 +26,7 @@ app.use(
 app.get('/health', (req, res) => res.json({ ok: true, service: 'syncflow-auth-api' }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/data', dataRoutes);
 
 app.use((req, res) => res.status(404).json({ ok: false, msg: 'Not found' }));
 
