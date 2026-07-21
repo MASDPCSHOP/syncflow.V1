@@ -762,7 +762,7 @@ const SITE_ID = 'syncflow_v1'; // unique per deployed website; change for each p
 
 // Point this at your deployed backend (see backend/README.md "Deploying to
 // the cloud"). Example: 'https://syncflow-api.onrender.com/api/auth'
- const API_BASE_URL = 'https://syncflow-v1.onrender.com/api/auth';
+const API_BASE_URL = 'http://localhost:4000/api/auth';
 
 function _sessionKey(){ return `${SITE_ID}_session`; }
 
@@ -824,6 +824,80 @@ const DB = {
   getCategories(){ return JSON.parse(localStorage.getItem(this._key('categories')) || '[]'); },
   saveCategories(c){ localStorage.setItem(this._key('categories'), JSON.stringify(c)); },
 };
+
+/*
+  DATA SYNC LAYER
+  ----------------
+  DB.* above still reads/writes localStorage exactly as before, so nothing
+  else in the app needs to change. On top of that:
+  - pullDataFromServer() runs right after login/register and on page load,
+    overwriting local data with whatever is saved centrally, so a new
+    device picks up your real products/sales/etc.
+  - schedulePush() runs a moment after any save, sending the current full
+    set of data to the server in the background so other devices can pick
+    it up next time they log in.
+*/
+const DATA_API_ROOT = 'https://syncflow-v1.onrender.com/api';
+
+async function dataApiFetch(path, options = {}){
+  const token = getAuthToken();
+  if(!token) return { ok:false, msg:'Not logged in' };
+  const headers = Object.assign(
+    { 'Content-Type': 'application/json' },
+    { Authorization: `Bearer ${token}` },
+    options.headers || {}
+  );
+  try{
+    const res = await fetch(`${DATA_API_ROOT}${path}`, { ...options, headers });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) return { ok:false, msg: data.msg || 'Sync failed' };
+    return data;
+  }catch(e){
+    return { ok:false, msg:'Could not reach the server' };
+  }
+}
+
+async function pullDataFromServer(){
+  const res = await dataApiFetch('/', { method:'GET' });
+  if(!res.ok || !res.data) return false;
+  const d = res.data;
+  if(d.products) DB.saveProducts(d.products);
+  if(d.sales) DB.saveSales(d.sales);
+  if(d.services) DB.saveServices(d.services);
+  if(d.expenses) DB.saveExpenses(d.expenses);
+  if(d.bookings) DB.saveBookings(d.bookings);
+  if(d.categories) DB.saveCategories(d.categories);
+  return true;
+}
+
+let _pushTimer = null;
+function schedulePush(){
+  if(_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(pushDataToServer, 1200);
+}
+async function pushDataToServer(){
+  if(!getCurrentUser()) return;
+  const payload = {
+    products: DB.getProducts(),
+    sales: DB.getSales(),
+    services: DB.getServices(),
+    expenses: DB.getExpenses(),
+    bookings: DB.getBookings(),
+    categories: DB.getCategories(),
+  };
+  await dataApiFetch('/', { method:'PUT', body: JSON.stringify(payload) });
+}
+
+// Wrap every DB.saveX so a push is scheduled automatically, without having
+// to edit the dozens of call sites throughout the app that already call
+// DB.saveProducts(), DB.saveSales(), etc.
+['saveProducts','saveSales','saveServices','saveExpenses','saveBookings','saveCategories'].forEach(fn=>{
+  const original = DB[fn];
+  DB[fn] = function(...args){
+    original.apply(DB, args);
+    schedulePush();
+  };
+});
 
 function getSettings(){
   return JSON.parse(localStorage.getItem(DB._key('settings')) || '{}');
@@ -1896,6 +1970,7 @@ document.getElementById('authSignInBtn').addEventListener('click', async ()=>{
   if(!res.ok){ document.getElementById('authMsg').textContent = res.msg; return; }
   document.getElementById('authMsg').textContent = '';
   updateAuthUI();
+  await pullDataFromServer();
   renderAll();
 });
 document.getElementById('authCreateBtn').addEventListener('click', async ()=>{
@@ -1909,6 +1984,7 @@ document.getElementById('authCreateBtn').addEventListener('click', async ()=>{
   if(!res.ok){ document.getElementById('authMsg').textContent = res.msg; return; }
   document.getElementById('authMsg').textContent = '';
   updateAuthUI();
+  await pullDataFromServer();
   renderAll();
 });
 
@@ -2075,6 +2151,13 @@ updateAuthUI();
 renderAll();
 renderCalendar(calendarYear, calendarMonth);
 try{ checkNotifications(); setInterval(checkNotifications, 5*60*1000); }catch(e){}
+// If already logged in on this device (session cached), refresh with the
+// latest data from the server in case another device made changes since.
+if(getCurrentUser()){
+  pullDataFromServer().then(ok=>{
+    if(ok){ renderAll(); renderCalendar(calendarYear, calendarMonth); }
+  });
+}
 </script>
 <script type="module" src="/src/main.tsx"></script>
 </body>
