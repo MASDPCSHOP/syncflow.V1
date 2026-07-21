@@ -837,7 +837,7 @@ const DB = {
     set of data to the server in the background so other devices can pick
     it up next time they log in.
 */
-const DATA_API_ROOT = 'https://syncflow-v1.onrender.com/api';
+const DATA_API_ROOT = 'https://syncflow-v1.onrender.com/api/data';
 
 async function dataApiFetch(path, options = {}){
   const token = getAuthToken();
