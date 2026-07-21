@@ -9,6 +9,12 @@ const { testConnection } = require('./db');
 
 const app = express();
 
+// Render sits in front of this app as a reverse proxy, so Express needs to
+// trust the X-Forwarded-For header it sets. "1" means trust exactly one
+// hop (Render's proxy) — this is what express-rate-limit needs to
+// correctly identify clients instead of throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(express.json({ limit: '100kb' }));
 
