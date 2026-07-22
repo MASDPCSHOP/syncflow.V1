@@ -5,15 +5,21 @@ const helmet = require('helmet');
 
 const authRoutes = require('./authRoutes');
 const dataRoutes = require('./dataRoutes');
+const adminRoutes = require('./adminRoutes');
 const { testConnection } = require('./db');
 
 const app = express();
 
+// Render (and most hosting platforms) sit behind a reverse proxy, so Express
+// needs to trust the X-Forwarded-For header to correctly identify each
+// request's real IP - otherwise express-rate-limit throws validation errors.
 app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(express.json({ limit: '100kb' }));
 
+// CORS_ORIGIN can be a comma-separated list, e.g.
+// "https://myapp.com,http://localhost:5500"
 const allowedOrigins = (process.env.CORS_ORIGIN || '*')
   .split(',')
   .map((o) => o.trim());
@@ -29,9 +35,12 @@ app.get('/health', (req, res) => res.json({ ok: true, service: 'syncflow-auth-ap
 
 app.use('/api/auth', authRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/admin', adminRoutes);
 
+// 404 handler
 app.use((req, res) => res.status(404).json({ ok: false, msg: 'Not found' }));
 
+// Central error handler (catches anything thrown/next(err) that wasn't handled)
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ ok: false, msg: 'Internal server error' });

@@ -20,7 +20,7 @@ function signToken(user) {
 }
 
 function publicUser(user) {
-  return { id: user.id, username: user.username, email: user.email || null };
+  return { id: user.id, username: user.username, email: user.email || null, isAdmin: !!user.is_admin };
 }
 
 async function register(req, res) {
@@ -78,6 +78,10 @@ async function login(req, res) {
       return res.status(401).json({ ok: false, msg: 'Invalid username or password' });
     }
 
+    if (user.active === false) {
+      return res.status(403).json({ ok: false, msg: 'This account has been suspended. Contact the site administrator.' });
+    }
+
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
       return res.status(401).json({ ok: false, msg: 'Invalid username or password' });
@@ -118,7 +122,7 @@ async function forgotPassword(req, res) {
 
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await pool.query(
       `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)

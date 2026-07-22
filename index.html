@@ -262,6 +262,12 @@
     .auth-left{padding:28px;order:2}
     .auth-right{width:100%;order:1;padding:20px}
   }
+@media print{
+  .sidebar, .topbar, .no-print{ display:none !important; }
+  .main{ padding:0 !important; }
+  .content{ padding:0 !important; overflow:visible !important; }
+  body{ overflow:visible !important; height:auto !important; }
+}
 </style>
 </head>
 <body>
@@ -301,8 +307,11 @@
   <div class="nav-item" data-page="products">📦 Products</div>
   <div class="nav-item" data-page="services">🔧 Services</div>
   <div class="nav-item" data-page="expenses">💸 Expenses</div>
+  <div class="nav-item" data-page="suppliers">📦 Suppliers</div>
+  <div class="nav-item" data-page="quotations">🧾 Quotations</div>
   <div class="nav-item" data-page="history">🧾 Sales History</div>
   <div class="nav-item" data-page="settings">⚙️ Settings</div>
+  <div class="nav-item" data-page="admin" id="adminNavItem" style="display:none;">🛡️ Admin</div>
   <div class="sidebar-footer">Local-first · Data saved per account</div>
 </div>
 
@@ -376,6 +385,39 @@
               <div class="label">Services Scheduled</div>
               <div class="value" id="dashboardDateServices">0</div>
             </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Suppliers &amp; Inventory Purchases</h2>
+          <div class="stat-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-top:16px;">
+            <div class="stat-card">
+              <div class="label">Total Suppliers</div>
+              <div class="value" id="statTotalSuppliers">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Deliveries This Month</div>
+              <div class="value" id="statDeliveriesMonth">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Inventory Purchased This Month</div>
+              <div class="value" id="statInventoryPurchasedMonth">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Total Purchase Cost</div>
+              <div class="value" id="statTotalPurchaseCost">₱0.00</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Quotations This Month</div>
+              <div class="value" id="statQuotationsMonth">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Quotations Converted to Sales</div>
+              <div class="value" id="statQuotationsConverted">0</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;">
+            <canvas id="purchasesChart" height="90"></canvas>
           </div>
         </div>
       </div>
@@ -506,6 +548,88 @@
       </div>
     </div>
 
+    <!-- SUPPLIERS -->
+    <div class="page" id="page-suppliers">
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn btn-outline btn-sm supplier-subtab active" data-subtab="supplierList">Suppliers</button>
+        <button class="btn btn-outline btn-sm supplier-subtab" data-subtab="stockDeliveries">Stock Deliveries</button>
+      </div>
+
+      <div id="supplierList-subtab">
+        <div class="search-bar">
+          <input type="text" id="supplierSearch" placeholder="Search suppliers...">
+          <button class="btn btn-primary" id="addSupplierBtn">+ Add Supplier</button>
+        </div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Supplier Name</th><th>Company</th><th>Contact Person</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="suppliersTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="stockDeliveries-subtab" style="display:none;">
+        <div class="search-bar">
+          <input type="text" id="deliverySearch" placeholder="Search deliveries (invoice, supplier)...">
+          <button class="btn btn-primary" id="addDeliveryBtn">+ Receive Delivery</button>
+        </div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Date</th><th>Invoice #</th><th>Supplier</th><th>Items</th><th>Total Cost</th><th>Actions</th></tr></thead>
+            <tbody id="deliveriesTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPLIER PURCHASE HISTORY (opened from a supplier's "View" button) -->
+    <div class="page" id="page-supplierHistory">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <h2 id="supplierHistoryTitle" style="margin:0;">Purchase History</h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" id="backToSuppliersBtn">← Back to Suppliers</button>
+            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+          </div>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="supplierHistorySearch" placeholder="Search by invoice #...">
+          <input type="date" id="supplierHistoryFrom" title="From date">
+          <input type="date" id="supplierHistoryTo" title="To date">
+        </div>
+        <table>
+          <thead><tr><th>Delivery Date</th><th>Invoice #</th><th>Products Purchased</th><th>Quantity</th><th>Total Cost</th></tr></thead>
+          <tbody id="supplierHistoryTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- QUOTATIONS -->
+    <div class="page" id="page-quotations">
+      <div class="search-bar">
+        <input type="text" id="quoteSearch" placeholder="Search quotations (customer, quote #)...">
+        <button class="btn btn-primary" id="addQuotationBtn">+ New Quotation</button>
+      </div>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Quote #</th><th>Date</th><th>Customer</th><th>Project Type</th><th>Grand Total</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="quotationsTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- QUOTATION PRINT VIEW -->
+    <div class="page" id="page-quotationPrint">
+      <div style="display:flex;gap:8px;margin-bottom:14px;" class="no-print">
+        <button class="btn btn-outline btn-sm" id="backToQuotationsBtn">← Back to Quotations</button>
+        <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+        <button class="btn btn-primary btn-sm" id="convertQuoteBtn">Convert to Sale</button>
+      </div>
+      <div class="panel" id="quotePrintArea" style="max-width:760px;margin:0 auto;">
+        <!-- filled in by renderQuotePrint() -->
+      </div>
+    </div>
+
     <!-- HISTORY -->
     <div class="page" id="page-history">
       <div class="panel">
@@ -586,6 +710,18 @@
       </div>
     </div>
 
+    <!-- ADMIN (only visible to admin accounts) -->
+    <div class="page" id="page-admin">
+      <div class="panel">
+        <h2>All Businesses</h2>
+        <p style="color:var(--gray);font-size:13px;margin-bottom:14px;">Every business using this platform. Suspending an account blocks their login until reactivated - their data is kept.</p>
+        <table>
+          <thead><tr><th>Company</th><th>Email</th><th>Signed Up</th><th>Products</th><th>Sales</th><th>Revenue</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="adminBusinessesTable"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -633,7 +769,161 @@
       <label>Product Discount (%)</label>
       <input type="number" id="fDiscount" placeholder="0" min="0" max="100" value="0">
     </div>
+    <div id="productPurchaseInfo" style="display:none;background:var(--gray-light);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--muted);">
+      <div><strong>Last Supplier:</strong> <span id="ppiSupplier">-</span></div>
+      <div><strong>Last Purchase Price:</strong> <span id="ppiPrice">-</span></div>
+      <div><strong>Last Delivery Date:</strong> <span id="ppiDate">-</span></div>
+    </div>
     <button class="btn btn-primary btn-block" id="saveProductBtn">Save Product</button>
+  </div>
+</div>
+<!-- SUPPLIER MODAL -->
+<div class="modal-overlay" id="supplierModalOverlay">
+  <div class="modal">
+    <span class="modal-close" id="closeSupplierModal">✕</span>
+    <h2 id="supplierModalTitle">Add Supplier</h2>
+    <input type="hidden" id="editSupplierId">
+    <div class="form-group">
+      <label>Supplier Name</label>
+      <input type="text" id="supName" placeholder="e.g. Juan Dela Cruz">
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Company Name</label>
+        <input type="text" id="supCompany" placeholder="e.g. ABC Computer Supply">
+      </div>
+      <div class="form-group">
+        <label>Contact Person</label>
+        <input type="text" id="supContact" placeholder="e.g. Maria Santos">
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="text" id="supPhone" placeholder="e.g. 0917 123 4567">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="supEmail" placeholder="e.g. sales@abcsupply.com">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="supAddress" placeholder="e.g. 123 Rizal St, Davao City">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <input type="text" id="supNotes" placeholder="Optional notes about this supplier">
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="supStatus">
+        <option value="Active">Active</option>
+        <option value="Inactive">Inactive</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-block" id="saveSupplierBtn">Save Supplier</button>
+  </div>
+</div>
+
+<!-- STOCK DELIVERY MODAL -->
+<div class="modal-overlay" id="deliveryModalOverlay">
+  <div class="modal" style="max-width:640px;">
+    <span class="modal-close" id="closeDeliveryModal">✕</span>
+    <h2>Receive Delivery</h2>
+    <input type="hidden" id="editDeliveryId">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Delivery Date</label>
+        <input type="date" id="delDate">
+      </div>
+      <div class="form-group">
+        <label>Invoice Number</label>
+        <input type="text" id="delInvoice" placeholder="e.g. 00021">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Supplier</label>
+      <select id="delSupplier"></select>
+    </div>
+    <div class="form-group">
+      <label>Products in this delivery</label>
+      <div id="delItemsList"></div>
+      <button type="button" class="btn btn-outline btn-sm" id="addDelItemBtn" style="margin-top:6px;">+ Add Product Line</button>
+    </div>
+    <div class="form-group">
+      <label>Remarks</label>
+      <input type="text" id="delRemarks" placeholder="Optional remarks">
+    </div>
+    <div style="text-align:right;font-weight:700;margin:10px 0;">Total Cost: <span id="delTotalCost">₱0.00</span></div>
+    <button class="btn btn-primary btn-block" id="saveDeliveryBtn">Receive Delivery</button>
+  </div>
+</div>
+
+<!-- QUOTATION MODAL -->
+<div class="modal-overlay" id="quoteModalOverlay">
+  <div class="modal" style="max-width:680px;">
+    <span class="modal-close" id="closeQuoteModal">✕</span>
+    <h2>New Quotation</h2>
+    <input type="hidden" id="editQuoteId">
+
+    <h3 style="font-size:14px;margin:14px 0 8px;">Customer Information</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Customer Name</label>
+        <input type="text" id="qCustomerName" placeholder="e.g. Juan Dela Cruz">
+      </div>
+      <div class="form-group">
+        <label>Contact Number</label>
+        <input type="text" id="qCustomerPhone" placeholder="e.g. 0917 123 4567">
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="qCustomerEmail" placeholder="Optional">
+      </div>
+      <div class="form-group">
+        <label>Project Type</label>
+        <select id="qProjectType">
+          <option>Personal Computer</option>
+          <option>Office Computer</option>
+          <option>Gaming PC</option>
+          <option>Internet Cafe / PisoNet</option>
+          <option>Diskless Internet Cafe</option>
+          <option>CCTV Installation</option>
+          <option>Networking</option>
+          <option>Printer Package</option>
+          <option>Custom Build</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="qCustomerAddress" placeholder="Optional">
+    </div>
+
+    <h3 style="font-size:14px;margin:14px 0 8px;">Products</h3>
+    <div id="qItemsList"></div>
+    <button type="button" class="btn btn-outline btn-sm" id="addQuoteItemBtn" style="margin-top:6px;">+ Add Product</button>
+
+    <h3 style="font-size:14px;margin:14px 0 8px;">Additional Charges</h3>
+    <div class="form-group">
+      <label>Delivery Fee (₱)</label>
+      <input type="number" id="qDeliveryFee" placeholder="0" min="0" step="0.01" value="0">
+    </div>
+    <div id="qChargesList"></div>
+    <button type="button" class="btn btn-outline btn-sm" id="addQuoteChargeBtn" style="margin-top:6px;">+ Add Charge (installation, labor, etc.)</button>
+
+    <div class="form-group" style="margin-top:14px;">
+      <label>Notes</label>
+      <input type="text" id="qNotes" placeholder="e.g. 1 Year Warranty, Prices valid for 7 days">
+    </div>
+
+    <div class="quote-total-row" style="text-align:right;font-weight:700;font-size:16px;margin:12px 0;">
+      Grand Total: <span id="qGrandTotal">₱0.00</span>
+    </div>
+    <button class="btn btn-primary btn-block" id="saveQuoteBtn">Save Quotation</button>
   </div>
 </div>
 
@@ -823,6 +1113,12 @@ const DB = {
   saveBookings(b){ localStorage.setItem(this._key('bookings'), JSON.stringify(b)); },
   getCategories(){ return JSON.parse(localStorage.getItem(this._key('categories')) || '[]'); },
   saveCategories(c){ localStorage.setItem(this._key('categories'), JSON.stringify(c)); },
+  getSuppliers(){ return JSON.parse(localStorage.getItem(this._key('suppliers')) || '[]'); },
+  saveSuppliers(s){ localStorage.setItem(this._key('suppliers'), JSON.stringify(s)); },
+  getDeliveries(){ return JSON.parse(localStorage.getItem(this._key('deliveries')) || '[]'); },
+  saveDeliveries(d){ localStorage.setItem(this._key('deliveries'), JSON.stringify(d)); },
+  getQuotations(){ return JSON.parse(localStorage.getItem(this._key('quotations')) || '[]'); },
+  saveQuotations(q){ localStorage.setItem(this._key('quotations'), JSON.stringify(q)); },
 };
 
 /*
@@ -857,6 +1153,94 @@ async function dataApiFetch(path, options = {}){
   }
 }
 
+/* ============ ADMIN (multi-business management) ============ */
+const ADMIN_API_ROOT = 'https://syncflow-v1.onrender.com/api/admin';
+
+async function adminApiFetch(path, options = {}){
+  const token = getAuthToken();
+  if(!token) return { ok:false, msg:'Not logged in' };
+  const headers = Object.assign(
+    { 'Content-Type': 'application/json' },
+    { Authorization: `Bearer ${token}` },
+    options.headers || {}
+  );
+  try{
+    const res = await fetch(`${ADMIN_API_ROOT}${path}`, { ...options, headers });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) return { ok:false, msg: data.msg || 'Request failed' };
+    return data;
+  }catch(e){
+    return { ok:false, msg:'Could not reach the server' };
+  }
+}
+
+function updateAdminNavVisibility(){
+  const user = getCurrentUser();
+  const navItem = document.getElementById('adminNavItem');
+  if(!navItem) return;
+  navItem.style.display = (user && user.isAdmin) ? '' : 'none';
+}
+
+async function renderAdminPage(){
+  const tbody = document.getElementById('adminBusinessesTable');
+  if(!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--gray);">Loading...</td></tr>`;
+  const res = await adminApiFetch('/businesses', { method:'GET' });
+  if(!res.ok){
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);">${escapeHtml(res.msg || 'Could not load businesses.')}</td></tr>`;
+    return;
+  }
+  const me = getCurrentUser();
+  if(res.businesses.length===0){
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--gray);">No businesses yet</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = res.businesses.map(b=>{
+    const statusBadge = b.active ? '<span class="badge ok">Active</span>' : '<span class="badge out">Suspended</span>';
+    const adminBadge = b.isAdmin ? ' <span class="badge ok">Admin</span>' : '';
+    const suspendBtn = b.active
+      ? `<button class="btn btn-outline btn-sm" onclick="adminSuspend('${b.id}')">Suspend</button>`
+      : `<button class="btn btn-outline btn-sm" onclick="adminActivate('${b.id}')">Reactivate</button>`;
+    const adminToggleBtn = b.isAdmin
+      ? (b.id===me.id ? '' : `<button class="btn btn-outline btn-sm" onclick="adminRevoke('${b.id}')">Remove Admin</button>`)
+      : `<button class="btn btn-outline btn-sm" onclick="adminGrant('${b.id}')">Make Admin</button>`;
+    return `<tr>
+      <td>${escapeHtml(b.username)}${adminBadge}</td>
+      <td>${escapeHtml(b.email||'-')}</td>
+      <td>${new Date(b.createdAt).toLocaleDateString()}</td>
+      <td>${b.productCount}</td>
+      <td>${b.salesCount}</td>
+      <td>₱${b.revenue.toFixed(2)}</td>
+      <td>${statusBadge}</td>
+      <td class="row-actions">${suspendBtn} ${adminToggleBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+window.adminSuspend = async function(id){
+  if(!confirm('Suspend this business? They will not be able to log in until reactivated.')) return;
+  const res = await adminApiFetch(`/businesses/${id}/suspend`, { method:'POST' });
+  if(!res.ok){ alert(res.msg || 'Could not suspend this business.'); return; }
+  renderAdminPage();
+};
+window.adminActivate = async function(id){
+  const res = await adminApiFetch(`/businesses/${id}/activate`, { method:'POST' });
+  if(!res.ok){ alert(res.msg || 'Could not reactivate this business.'); return; }
+  renderAdminPage();
+};
+window.adminGrant = async function(id){
+  if(!confirm('Give this account admin access? They will be able to view and manage every business.')) return;
+  const res = await adminApiFetch(`/businesses/${id}/grant-admin`, { method:'POST' });
+  if(!res.ok){ alert(res.msg || 'Could not grant admin access.'); return; }
+  renderAdminPage();
+};
+window.adminRevoke = async function(id){
+  if(!confirm('Remove admin access from this account?')) return;
+  const res = await adminApiFetch(`/businesses/${id}/revoke-admin`, { method:'POST' });
+  if(!res.ok){ alert(res.msg || 'Could not remove admin access.'); return; }
+  renderAdminPage();
+};
+
 async function pullDataFromServer(){
   const res = await dataApiFetch('/', { method:'GET' });
   if(!res.ok || !res.data) return false;
@@ -867,6 +1251,9 @@ async function pullDataFromServer(){
   if(d.expenses) DB.saveExpenses(d.expenses);
   if(d.bookings) DB.saveBookings(d.bookings);
   if(d.categories) DB.saveCategories(d.categories);
+  if(d.suppliers) DB.saveSuppliers(d.suppliers);
+  if(d.deliveries) DB.saveDeliveries(d.deliveries);
+  if(d.quotations) DB.saveQuotations(d.quotations);
   return true;
 }
 
@@ -884,6 +1271,9 @@ async function pushDataToServer(){
     expenses: DB.getExpenses(),
     bookings: DB.getBookings(),
     categories: DB.getCategories(),
+    suppliers: DB.getSuppliers(),
+    deliveries: DB.getDeliveries(),
+    quotations: DB.getQuotations(),
   };
   await dataApiFetch('/', { method:'PUT', body: JSON.stringify(payload) });
 }
@@ -891,7 +1281,7 @@ async function pushDataToServer(){
 // Wrap every DB.saveX so a push is scheduled automatically, without having
 // to edit the dozens of call sites throughout the app that already call
 // DB.saveProducts(), DB.saveSales(), etc.
-['saveProducts','saveSales','saveServices','saveExpenses','saveBookings','saveCategories'].forEach(fn=>{
+['saveProducts','saveSales','saveServices','saveExpenses','saveBookings','saveCategories','saveSuppliers','saveDeliveries','saveQuotations'].forEach(fn=>{
   const original = DB[fn];
   DB[fn] = function(...args){
     original.apply(DB, args);
@@ -1008,7 +1398,7 @@ async function registerUser(companyName, password){
 
   // Cache the logged-in session locally (id/username/token), same shape the
   // rest of the app already expects from getCurrentUser().
-  setCurrentUser({ id: res.user.id, username: res.user.username, token: res.token });
+  setCurrentUser({ id: res.user.id, username: res.user.username, token: res.token, isAdmin: !!res.user.isAdmin });
   return { ok:true };
 }
 
@@ -1019,7 +1409,7 @@ async function loginUser(username, password){
   });
   if(!res.ok) return { ok:false, msg: res.msg };
 
-  setCurrentUser({ id: res.user.id, username: res.user.username, token: res.token });
+  setCurrentUser({ id: res.user.id, username: res.user.username, token: res.token, isAdmin: !!res.user.isAdmin });
   return { ok:true };
 }
 
@@ -1050,6 +1440,7 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     document.getElementById('page-'+page).classList.add('active');
     document.getElementById('pageTitle').textContent = item.textContent.trim().replace(/^\S+\s/, '');
     if(page === 'settings') setTimeout(loadSettingsToForm, 50);
+    if(page === 'admin') renderAdminPage();
     renderAll();
   });
 });
@@ -1113,6 +1504,72 @@ function renderDashboard(){
 
   try{ renderFinancePie(); }catch(e){}
   try{ renderMainChart(); }catch(e){}
+  try{ renderSupplierStats(); }catch(e){}
+  try{ renderPurchasesChart(); }catch(e){}
+}
+
+function renderSupplierStats(){
+  const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  const suppliers = DB.getSuppliers();
+  const deliveries = DB.getDeliveries();
+  const now = new Date();
+  const monthDeliveries = deliveries.filter(d=>{
+    const dd = new Date(d.date);
+    return dd.getMonth()===now.getMonth() && dd.getFullYear()===now.getFullYear();
+  });
+  const monthItemsPurchased = monthDeliveries.reduce((sum,d)=> sum + (d.items||[]).reduce((s,i)=>s+i.qty,0), 0);
+  const totalPurchaseCost = deliveries.reduce((sum,d)=> sum + (d.items||[]).reduce((s,i)=>s+(i.qty*i.cost),0), 0);
+
+  setText('statTotalSuppliers', suppliers.length);
+  setText('statDeliveriesMonth', monthDeliveries.length);
+  setText('statInventoryPurchasedMonth', monthItemsPurchased);
+  setText('statTotalPurchaseCost', '₱' + totalPurchaseCost.toFixed(2));
+
+  const quotes = DB.getQuotations();
+  const monthQuotes = quotes.filter(q=>{
+    const qd = new Date(q.date);
+    return qd.getMonth()===now.getMonth() && qd.getFullYear()===now.getFullYear();
+  });
+  setText('statQuotationsMonth', monthQuotes.length);
+  setText('statQuotationsConverted', quotes.filter(q=>q.status==='converted').length);
+}
+
+function renderPurchasesChart(){
+  const canvas = document.getElementById('purchasesChart');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const deliveries = DB.getDeliveries();
+  const now = new Date();
+  const labels = [];
+  const values = [];
+  for(let i=5;i>=0;i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const m = d.getMonth(); const y = d.getFullYear();
+    labels.push(d.toLocaleString('default',{month:'short'}));
+    const total = deliveries.filter(dl=>{ const dd=new Date(dl.date); return dd.getMonth()===m && dd.getFullYear()===y; })
+      .reduce((sum,dl)=> sum + (dl.items||[]).reduce((s,i)=>s+(i.qty*i.cost),0), 0);
+    values.push(total);
+  }
+  const w = canvas.width = canvas.clientWidth * devicePixelRatio;
+  const h = canvas.height = canvas.clientHeight * devicePixelRatio;
+  ctx.clearRect(0,0,w,h);
+  const padding = 36 * devicePixelRatio;
+  const cy = h - padding;
+  const chartW = w - padding*2; const chartH = h - padding*2;
+  const max = Math.max(1, ...values);
+  const barW = chartW / values.length * 0.65;
+  const gap = (chartW - barW*values.length) / (values.length - 1 || 1);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--warning') || '#e08a00';
+  for(let i=0;i<values.length;i++){
+    const x = padding + i*(barW+gap);
+    const hBar = (values[i]/max) * chartH;
+    ctx.fillStyle = accent.trim();
+    ctx.fillRect(x, cy - hBar, barW, hBar);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted');
+    ctx.font = `${11*devicePixelRatio}px Segoe UI`;
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], x + barW/2, h - 10*devicePixelRatio);
+  }
 }
 
 function renderMainChart(){
@@ -1599,6 +2056,7 @@ document.getElementById('addProductBtn').addEventListener('click', ()=>{
   document.getElementById('fStock').value = '';
   document.getElementById('fThreshold').value = '5';
   document.getElementById('fDiscount').value = '0';
+  document.getElementById('productPurchaseInfo').style.display = 'none';
   document.getElementById('productModalOverlay').classList.add('active');
 });
 
@@ -1615,6 +2073,18 @@ function openEditProduct(id){
   document.getElementById('fStock').value = p.stock;
   document.getElementById('fThreshold').value = p.threshold;
   document.getElementById('fDiscount').value = p.discount || 0;
+
+  const infoBox = document.getElementById('productPurchaseInfo');
+  if(p.supplierId || p.lastPurchasePrice || p.lastDeliveryDate){
+    const supplier = DB.getSuppliers().find(s=>s.id===p.supplierId);
+    document.getElementById('ppiSupplier').textContent = supplier ? supplier.name : 'Unknown';
+    document.getElementById('ppiPrice').textContent = p.lastPurchasePrice != null ? '₱'+Number(p.lastPurchasePrice).toFixed(2) : '-';
+    document.getElementById('ppiDate').textContent = p.lastDeliveryDate ? new Date(p.lastDeliveryDate).toLocaleDateString() : '-';
+    infoBox.style.display = '';
+  } else {
+    infoBox.style.display = 'none';
+  }
+
   document.getElementById('productModalOverlay').classList.add('active');
 }
 
@@ -1872,6 +2342,660 @@ document.getElementById('addCategoryBtn')?.addEventListener('click', ()=>{
   renderAll();
 });
 
+/* ============ SUPPLIERS ============ */
+function renderSuppliers(filter=''){
+  const tbody = document.getElementById('suppliersTable');
+  if(!tbody) return;
+  const suppliers = DB.getSuppliers().filter(s =>
+    (s.name||'').toLowerCase().includes(filter.toLowerCase()) ||
+    (s.company||'').toLowerCase().includes(filter.toLowerCase())
+  );
+  if(suppliers.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray);">No suppliers yet</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = suppliers.map(s=>{
+    const badge = s.status === 'Inactive' ? '<span class="badge out">Inactive</span>' : '<span class="badge ok">Active</span>';
+    return `<tr>
+      <td>${escapeHtml(s.name||'')}</td>
+      <td>${escapeHtml(s.company||'')}</td>
+      <td>${escapeHtml(s.contact||'')}</td>
+      <td>${escapeHtml(s.phone||'')}</td>
+      <td>${badge}</td>
+      <td class="row-actions">
+        <button class="btn btn-outline btn-sm" onclick="viewSupplierHistory('${s.id}')">View</button>
+        <button class="btn btn-outline btn-sm" onclick="openEditSupplier('${s.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSupplier('${s.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function populateSupplierDropdown(){
+  const sel = document.getElementById('delSupplier');
+  if(!sel) return;
+  const suppliers = DB.getSuppliers().filter(s=>s.status!=='Inactive');
+  sel.innerHTML = suppliers.length
+    ? suppliers.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}${s.company?' - '+escapeHtml(s.company):''}</option>`).join('')
+    : `<option value="">No active suppliers - add one first</option>`;
+}
+
+document.getElementById('addSupplierBtn').addEventListener('click', ()=>{
+  document.getElementById('supplierModalTitle').textContent = 'Add Supplier';
+  document.getElementById('editSupplierId').value = '';
+  ['supName','supCompany','supContact','supPhone','supEmail','supAddress','supNotes'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('supStatus').value = 'Active';
+  document.getElementById('supplierModalOverlay').classList.add('active');
+});
+document.getElementById('closeSupplierModal').addEventListener('click', ()=>{ document.getElementById('supplierModalOverlay').classList.remove('active'); });
+
+document.getElementById('saveSupplierBtn').addEventListener('click', ()=>{
+  const id = document.getElementById('editSupplierId').value;
+  const name = document.getElementById('supName').value.trim();
+  if(!name){ alert('Please enter a supplier name.'); return; }
+  const supplierData = {
+    name,
+    company: document.getElementById('supCompany').value.trim(),
+    contact: document.getElementById('supContact').value.trim(),
+    phone: document.getElementById('supPhone').value.trim(),
+    email: document.getElementById('supEmail').value.trim(),
+    address: document.getElementById('supAddress').value.trim(),
+    notes: document.getElementById('supNotes').value.trim(),
+    status: document.getElementById('supStatus').value,
+  };
+  const suppliers = DB.getSuppliers();
+  if(id){ const s = suppliers.find(x=>x.id===id); Object.assign(s, supplierData); }
+  else { suppliers.push({ id: crypto.randomUUID(), ...supplierData }); }
+  DB.saveSuppliers(suppliers);
+  document.getElementById('supplierModalOverlay').classList.remove('active');
+  renderAll();
+});
+
+window.openEditSupplier = function(id){
+  const s = DB.getSuppliers().find(x=>x.id===id);
+  if(!s) return;
+  document.getElementById('supplierModalTitle').textContent = 'Edit Supplier';
+  document.getElementById('editSupplierId').value = s.id;
+  document.getElementById('supName').value = s.name||'';
+  document.getElementById('supCompany').value = s.company||'';
+  document.getElementById('supContact').value = s.contact||'';
+  document.getElementById('supPhone').value = s.phone||'';
+  document.getElementById('supEmail').value = s.email||'';
+  document.getElementById('supAddress').value = s.address||'';
+  document.getElementById('supNotes').value = s.notes||'';
+  document.getElementById('supStatus').value = s.status||'Active';
+  document.getElementById('supplierModalOverlay').classList.add('active');
+};
+
+window.deleteSupplier = function(id){
+  if(!confirm('Delete this supplier? Past delivery history will be kept, but this supplier will no longer be selectable for new deliveries.')) return;
+  const suppliers = DB.getSuppliers().filter(x=>x.id!==id);
+  DB.saveSuppliers(suppliers);
+  renderAll();
+};
+
+/* ============ STOCK DELIVERIES ============ */
+let delItemRows = [];
+
+function renderDeliveries(filter=''){
+  const tbody = document.getElementById('deliveriesTable');
+  if(!tbody) return;
+  const suppliers = DB.getSuppliers();
+  const deliveries = DB.getDeliveries()
+    .slice()
+    .sort((a,b)=> new Date(b.date) - new Date(a.date))
+    .filter(d=>{
+      const supplier = suppliers.find(s=>s.id===d.supplierId);
+      const supName = supplier ? supplier.name : '';
+      return (d.invoice||'').toLowerCase().includes(filter.toLowerCase()) ||
+             supName.toLowerCase().includes(filter.toLowerCase());
+    });
+  if(deliveries.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray);">No deliveries recorded yet</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = deliveries.map(d=>{
+    const supplier = suppliers.find(s=>s.id===d.supplierId);
+    const itemsSummary = (d.items||[]).map(i=>`${escapeHtml(i.productName)} x${i.qty}`).join(', ');
+    const total = (d.items||[]).reduce((sum,i)=> sum + (i.qty*i.cost), 0);
+    return `<tr>
+      <td>${new Date(d.date).toLocaleDateString()}</td>
+      <td>${escapeHtml(d.invoice||'')}</td>
+      <td>${escapeHtml(supplier ? supplier.name : 'Unknown supplier')}</td>
+      <td>${itemsSummary}</td>
+      <td>₱${total.toFixed(2)}</td>
+      <td class="row-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteDelivery('${d.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderDelItemRows(){
+  const container = document.getElementById('delItemsList');
+  const products = DB.getProducts();
+  container.innerHTML = delItemRows.map((row, idx)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;" data-row="${idx}">
+      <select class="delItemProduct" data-idx="${idx}" style="flex:2;">
+        <option value="">-- Select product --</option>
+        ${products.map(p=>`<option value="${p.id}" ${row.productId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+      </select>
+      <input type="number" class="delItemQty" data-idx="${idx}" placeholder="Qty" min="1" value="${row.qty||''}" style="width:70px;">
+      <input type="number" class="delItemCost" data-idx="${idx}" placeholder="Cost/item" min="0" step="0.01" value="${row.cost||''}" style="width:90px;">
+      <button type="button" class="btn btn-danger btn-sm" onclick="removeDelItemRow(${idx})">✕</button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.delItemProduct').forEach(el=> el.addEventListener('change', e=>{
+    delItemRows[e.target.dataset.idx].productId = e.target.value;
+    updateDelTotal();
+  }));
+  container.querySelectorAll('.delItemQty').forEach(el=> el.addEventListener('input', e=>{
+    delItemRows[e.target.dataset.idx].qty = parseFloat(e.target.value)||0;
+    updateDelTotal();
+  }));
+  container.querySelectorAll('.delItemCost').forEach(el=> el.addEventListener('input', e=>{
+    delItemRows[e.target.dataset.idx].cost = parseFloat(e.target.value)||0;
+    updateDelTotal();
+  }));
+  updateDelTotal();
+}
+
+function updateDelTotal(){
+  const total = delItemRows.reduce((sum,r)=> sum + ((r.qty||0)*(r.cost||0)), 0);
+  const el = document.getElementById('delTotalCost');
+  if(el) el.textContent = '₱' + total.toFixed(2);
+}
+
+window.removeDelItemRow = function(idx){
+  delItemRows.splice(idx,1);
+  renderDelItemRows();
+};
+
+document.getElementById('addDeliveryBtn').addEventListener('click', ()=>{
+  if(DB.getSuppliers().filter(s=>s.status!=='Inactive').length===0){
+    alert('Please add a supplier first before recording a delivery.');
+    return;
+  }
+  document.getElementById('editDeliveryId').value = '';
+  document.getElementById('delDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('delInvoice').value = '';
+  document.getElementById('delRemarks').value = '';
+  populateSupplierDropdown();
+  delItemRows = [{ productId:'', qty:1, cost:0 }];
+  renderDelItemRows();
+  document.getElementById('deliveryModalOverlay').classList.add('active');
+});
+document.getElementById('closeDeliveryModal').addEventListener('click', ()=>{ document.getElementById('deliveryModalOverlay').classList.remove('active'); });
+document.getElementById('addDelItemBtn').addEventListener('click', ()=>{
+  delItemRows.push({ productId:'', qty:1, cost:0 });
+  renderDelItemRows();
+});
+
+document.getElementById('saveDeliveryBtn').addEventListener('click', ()=>{
+  const supplierId = document.getElementById('delSupplier').value;
+  const date = document.getElementById('delDate').value;
+  const invoice = document.getElementById('delInvoice').value.trim();
+  const remarks = document.getElementById('delRemarks').value.trim();
+
+  if(!supplierId){ alert('Please select a supplier.'); return; }
+  if(!date){ alert('Please select a delivery date.'); return; }
+  const validRows = delItemRows.filter(r=> r.productId && r.qty>0 && r.cost>=0);
+  if(validRows.length===0){ alert('Please add at least one product with quantity and cost.'); return; }
+
+  const products = DB.getProducts();
+  const items = [];
+  validRows.forEach(row=>{
+    const product = products.find(p=>p.id===row.productId);
+    if(!product) return;
+    // Increase inventory
+    product.stock = (parseInt(product.stock)||0) + row.qty;
+    // Save supplier + last purchase info on the product
+    product.supplierId = supplierId;
+    product.lastPurchasePrice = row.cost;
+    product.lastDeliveryDate = date;
+    items.push({ productId: product.id, productName: product.name, qty: row.qty, cost: row.cost });
+  });
+  DB.saveProducts(products);
+
+  const totalCost = items.reduce((sum,i)=> sum + (i.qty*i.cost), 0);
+
+  // Save the delivery record
+  const deliveries = DB.getDeliveries();
+  deliveries.push({ id: crypto.randomUUID(), date, supplierId, invoice, items, remarks, totalCost });
+  DB.saveDeliveries(deliveries);
+
+  // Automatically create the matching Expense - user never enters this manually
+  const supplier = DB.getSuppliers().find(s=>s.id===supplierId);
+  const expenses = DB.getExpenses();
+  expenses.push({
+    id: crypto.randomUUID(),
+    date,
+    category: 'Inventory Purchase',
+    description: `Purchase of Inventory${invoice ? ' - Invoice #'+invoice : ''}`,
+    amount: totalCost,
+    supplierId,
+  });
+  DB.saveExpenses(expenses);
+
+  document.getElementById('deliveryModalOverlay').classList.remove('active');
+  renderAll();
+  showToast('Stock successfully received.');
+
+  // Low stock check on the products just updated
+  items.forEach(i=>{
+    const p = products.find(pp=>pp.id===i.productId);
+    if(p && p.stock > 0 && p.stock <= (p.threshold||5)){
+      notifyUser('Low Stock Warning', `${p.name} is running low (${p.stock} left).`);
+    }
+  });
+});
+
+window.deleteDelivery = function(id){
+  if(!confirm('Delete this delivery record? This will NOT reverse the inventory or expense it created.')) return;
+  const deliveries = DB.getDeliveries().filter(x=>x.id!==id);
+  DB.saveDeliveries(deliveries);
+  renderAll();
+};
+
+/* Supplier sub-tabs (Suppliers / Stock Deliveries) */
+document.querySelectorAll('.supplier-subtab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.supplier-subtab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.subtab;
+    document.getElementById('supplierList-subtab').style.display = target==='supplierList' ? '' : 'none';
+    document.getElementById('stockDeliveries-subtab').style.display = target==='stockDeliveries' ? '' : 'none';
+  });
+});
+
+document.getElementById('supplierSearch').addEventListener('input', e=> renderSuppliers(e.target.value));
+document.getElementById('deliverySearch').addEventListener('input', e=> renderDeliveries(e.target.value));
+
+/* ============ SUPPLIER PURCHASE HISTORY PAGE ============ */
+let currentHistorySupplierId = null;
+
+window.viewSupplierHistory = function(supplierId){
+  currentHistorySupplierId = supplierId;
+  const supplier = DB.getSuppliers().find(s=>s.id===supplierId);
+  document.getElementById('supplierHistoryTitle').textContent = 'Purchase History - ' + (supplier ? supplier.name : 'Unknown Supplier');
+  document.getElementById('supplierHistorySearch').value = '';
+  document.getElementById('supplierHistoryFrom').value = '';
+  document.getElementById('supplierHistoryTo').value = '';
+  renderSupplierHistory();
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-supplierHistory').classList.add('active');
+};
+
+document.getElementById('backToSuppliersBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-suppliers').classList.add('active');
+  document.querySelector('.nav-item[data-page="suppliers"]').classList.add('active');
+});
+
+function renderSupplierHistory(){
+  const tbody = document.getElementById('supplierHistoryTable');
+  if(!tbody || !currentHistorySupplierId) return;
+  const search = (document.getElementById('supplierHistorySearch').value||'').toLowerCase();
+  const fromVal = document.getElementById('supplierHistoryFrom').value;
+  const toVal = document.getElementById('supplierHistoryTo').value;
+
+  let deliveries = DB.getDeliveries().filter(d=>d.supplierId===currentHistorySupplierId);
+  if(search) deliveries = deliveries.filter(d=> (d.invoice||'').toLowerCase().includes(search));
+  if(fromVal) deliveries = deliveries.filter(d=> new Date(d.date) >= new Date(fromVal));
+  if(toVal) deliveries = deliveries.filter(d=> new Date(d.date) <= new Date(toVal));
+  deliveries.sort((a,b)=> new Date(b.date) - new Date(a.date));
+
+  if(deliveries.length===0){
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray);">No purchase history found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = deliveries.map(d=>{
+    const itemsSummary = (d.items||[]).map(i=>`${escapeHtml(i.productName)} x${i.qty}`).join(', ');
+    const totalQty = (d.items||[]).reduce((sum,i)=> sum + i.qty, 0);
+    const totalCost = (d.items||[]).reduce((sum,i)=> sum + (i.qty*i.cost), 0);
+    return `<tr>
+      <td>${new Date(d.date).toLocaleDateString()}</td>
+      <td>${escapeHtml(d.invoice||'')}</td>
+      <td>${itemsSummary}</td>
+      <td>${totalQty}</td>
+      <td>₱${totalCost.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+}
+
+['supplierHistorySearch','supplierHistoryFrom','supplierHistoryTo'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', renderSupplierHistory);
+});
+
+/* ============ QUOTATIONS ============ */
+let quoteItemRows = [];
+let quoteChargeRows = [];
+let currentPrintQuoteId = null;
+
+function nextQuoteNumber(){
+  const quotes = DB.getQuotations();
+  const n = quotes.length + 1;
+  return 'Q-' + String(n).padStart(4,'0');
+}
+
+function renderQuotations(filter=''){
+  const tbody = document.getElementById('quotationsTable');
+  if(!tbody) return;
+  const quotes = DB.getQuotations()
+    .slice()
+    .sort((a,b)=> new Date(b.date) - new Date(a.date))
+    .filter(q=>
+      (q.quoteNumber||'').toLowerCase().includes(filter.toLowerCase()) ||
+      (q.customerName||'').toLowerCase().includes(filter.toLowerCase())
+    );
+  if(quotes.length===0){
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--gray);">No quotations yet</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = quotes.map(q=>{
+    const statusBadge = q.status==='converted' ? '<span class="badge ok">Converted to Sale</span>' : '<span class="badge">Draft</span>';
+    return `<tr>
+      <td>${escapeHtml(q.quoteNumber)}</td>
+      <td>${new Date(q.date).toLocaleDateString()}</td>
+      <td>${escapeHtml(q.customerName||'')}</td>
+      <td>${escapeHtml(q.projectType||'')}</td>
+      <td>₱${q.grandTotal.toFixed(2)}</td>
+      <td>${statusBadge}</td>
+      <td class="row-actions">
+        <button class="btn btn-outline btn-sm" onclick="viewQuotePrint('${q.id}')">View / Print</button>
+        ${q.status!=='converted' ? `<button class="btn btn-outline btn-sm" onclick="openEditQuote('${q.id}')">Edit</button>` : ''}
+        <button class="btn btn-danger btn-sm" onclick="deleteQuote('${q.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('quoteSearch').addEventListener('input', e=> renderQuotations(e.target.value));
+
+/* ---- product line items (pulled from Inventory, selling price not cost) ---- */
+function renderQuoteItemRows(){
+  const container = document.getElementById('qItemsList');
+  const products = DB.getProducts();
+  container.innerHTML = quoteItemRows.map((row, idx)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <select class="qItemProduct" data-idx="${idx}" style="flex:2;">
+        <option value="">-- Select product --</option>
+        ${products.map(p=>`<option value="${p.id}" ${row.productId===p.id?'selected':''}>${escapeHtml(p.name)} (${p.stock} in stock)</option>`).join('')}
+      </select>
+      <input type="number" class="qItemQty" data-idx="${idx}" placeholder="Qty" min="1" value="${row.qty||''}" style="width:70px;">
+      <input type="number" class="qItemPrice" data-idx="${idx}" placeholder="Unit price" min="0" step="0.01" value="${row.price||''}" style="width:100px;">
+      <button type="button" class="btn btn-danger btn-sm" onclick="removeQuoteItemRow(${idx})">✕</button>
+    </div>
+  `).join('');
+  container.querySelectorAll('.qItemProduct').forEach(el=> el.addEventListener('change', e=>{
+    const idx = e.target.dataset.idx;
+    quoteItemRows[idx].productId = e.target.value;
+    const p = DB.getProducts().find(pr=>pr.id===e.target.value);
+    if(p) quoteItemRows[idx].price = p.price;
+    renderQuoteItemRows();
+  }));
+  container.querySelectorAll('.qItemQty').forEach(el=> el.addEventListener('input', e=>{
+    quoteItemRows[e.target.dataset.idx].qty = parseFloat(e.target.value)||0;
+    updateQuoteGrandTotal();
+  }));
+  container.querySelectorAll('.qItemPrice').forEach(el=> el.addEventListener('input', e=>{
+    quoteItemRows[e.target.dataset.idx].price = parseFloat(e.target.value)||0;
+    updateQuoteGrandTotal();
+  }));
+  updateQuoteGrandTotal();
+}
+window.removeQuoteItemRow = function(idx){ quoteItemRows.splice(idx,1); renderQuoteItemRows(); };
+document.getElementById('addQuoteItemBtn').addEventListener('click', ()=>{
+  quoteItemRows.push({ productId:'', qty:1, price:0 });
+  renderQuoteItemRows();
+});
+
+/* ---- additional charges (installation, labor, etc.) ---- */
+function renderQuoteChargeRows(){
+  const container = document.getElementById('qChargesList');
+  container.innerHTML = quoteChargeRows.map((row, idx)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <input type="text" class="qChargeLabel" data-idx="${idx}" placeholder="e.g. Installation Fee" value="${escapeHtml(row.label||'')}" style="flex:2;">
+      <input type="number" class="qChargeAmount" data-idx="${idx}" placeholder="Amount" min="0" step="0.01" value="${row.amount||''}" style="width:100px;">
+      <button type="button" class="btn btn-danger btn-sm" onclick="removeQuoteChargeRow(${idx})">✕</button>
+    </div>
+  `).join('');
+  container.querySelectorAll('.qChargeLabel').forEach(el=> el.addEventListener('input', e=>{
+    quoteChargeRows[e.target.dataset.idx].label = e.target.value;
+  }));
+  container.querySelectorAll('.qChargeAmount').forEach(el=> el.addEventListener('input', e=>{
+    quoteChargeRows[e.target.dataset.idx].amount = parseFloat(e.target.value)||0;
+    updateQuoteGrandTotal();
+  }));
+}
+window.removeQuoteChargeRow = function(idx){ quoteChargeRows.splice(idx,1); renderQuoteChargeRows(); updateQuoteGrandTotal(); };
+document.getElementById('addQuoteChargeBtn').addEventListener('click', ()=>{
+  quoteChargeRows.push({ label:'', amount:0 });
+  renderQuoteChargeRows();
+});
+document.getElementById('qDeliveryFee').addEventListener('input', updateQuoteGrandTotal);
+
+function updateQuoteGrandTotal(){
+  const productsTotal = quoteItemRows.reduce((s,r)=> s + ((r.qty||0)*(r.price||0)), 0);
+  const deliveryFee = parseFloat(document.getElementById('qDeliveryFee').value)||0;
+  const chargesTotal = quoteChargeRows.reduce((s,r)=> s + (r.amount||0), 0);
+  const grand = productsTotal + deliveryFee + chargesTotal;
+  const el = document.getElementById('qGrandTotal');
+  if(el) el.textContent = '₱' + grand.toFixed(2);
+  return grand;
+}
+
+document.getElementById('addQuotationBtn').addEventListener('click', ()=>{
+  document.getElementById('editQuoteId').value = '';
+  document.getElementById('qCustomerName').value = '';
+  document.getElementById('qCustomerPhone').value = '';
+  document.getElementById('qCustomerEmail').value = '';
+  document.getElementById('qCustomerAddress').value = '';
+  document.getElementById('qProjectType').value = 'Personal Computer';
+  document.getElementById('qDeliveryFee').value = '0';
+  document.getElementById('qNotes').value = '';
+  quoteItemRows = [{ productId:'', qty:1, price:0 }];
+  quoteChargeRows = [];
+  renderQuoteItemRows();
+  renderQuoteChargeRows();
+  document.getElementById('quoteModalOverlay').classList.add('active');
+});
+document.getElementById('closeQuoteModal').addEventListener('click', ()=>{ document.getElementById('quoteModalOverlay').classList.remove('active'); });
+
+window.openEditQuote = function(id){
+  const q = DB.getQuotations().find(x=>x.id===id);
+  if(!q) return;
+  document.getElementById('editQuoteId').value = q.id;
+  document.getElementById('qCustomerName').value = q.customerName||'';
+  document.getElementById('qCustomerPhone').value = q.customerPhone||'';
+  document.getElementById('qCustomerEmail').value = q.customerEmail||'';
+  document.getElementById('qCustomerAddress').value = q.customerAddress||'';
+  document.getElementById('qProjectType').value = q.projectType||'Personal Computer';
+  document.getElementById('qDeliveryFee').value = q.deliveryFee||0;
+  document.getElementById('qNotes').value = q.notes||'';
+  quoteItemRows = (q.items||[]).map(i=>({ productId:i.productId, qty:i.qty, price:i.price }));
+  quoteChargeRows = (q.charges||[]).map(c=>({ label:c.label, amount:c.amount }));
+  renderQuoteItemRows();
+  renderQuoteChargeRows();
+  document.getElementById('quoteModalOverlay').classList.add('active');
+};
+
+document.getElementById('saveQuoteBtn').addEventListener('click', ()=>{
+  const customerName = document.getElementById('qCustomerName').value.trim();
+  if(!customerName){ alert('Please enter a customer name.'); return; }
+  const validItems = quoteItemRows.filter(r=> r.productId && r.qty>0);
+  if(validItems.length===0){ alert('Please add at least one product.'); return; }
+
+  const products = DB.getProducts();
+  const items = validItems.map(r=>{
+    const p = products.find(pr=>pr.id===r.productId);
+    return { productId:r.productId, productName: p?p.name:'Unknown', qty:r.qty, price:r.price };
+  });
+  const deliveryFee = parseFloat(document.getElementById('qDeliveryFee').value)||0;
+  const charges = quoteChargeRows.filter(c=>c.label && c.amount>0);
+  const grandTotal = updateQuoteGrandTotal();
+
+  const id = document.getElementById('editQuoteId').value;
+  const quotes = DB.getQuotations();
+  const quoteData = {
+    customerName,
+    customerPhone: document.getElementById('qCustomerPhone').value.trim(),
+    customerEmail: document.getElementById('qCustomerEmail').value.trim(),
+    customerAddress: document.getElementById('qCustomerAddress').value.trim(),
+    projectType: document.getElementById('qProjectType').value,
+    items, deliveryFee, charges, grandTotal,
+    notes: document.getElementById('qNotes').value.trim(),
+  };
+
+  if(id){
+    const q = quotes.find(x=>x.id===id);
+    Object.assign(q, quoteData);
+  } else {
+    quotes.push({ id: crypto.randomUUID(), quoteNumber: nextQuoteNumber(), date: new Date().toISOString(), status:'draft', ...quoteData });
+  }
+  DB.saveQuotations(quotes);
+  document.getElementById('quoteModalOverlay').classList.remove('active');
+  renderAll();
+  showToast('Quotation saved.');
+});
+
+window.deleteQuote = function(id){
+  if(!confirm('Delete this quotation?')) return;
+  DB.saveQuotations(DB.getQuotations().filter(x=>x.id!==id));
+  renderAll();
+};
+
+/* ---- Printable view + Convert to Sale ---- */
+window.viewQuotePrint = function(id){
+  currentPrintQuoteId = id;
+  renderQuotePrint();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-quotationPrint').classList.add('active');
+};
+document.getElementById('backToQuotationsBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-quotations').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelector('.nav-item[data-page="quotations"]').classList.add('active');
+});
+
+function renderQuotePrint(){
+  const q = DB.getQuotations().find(x=>x.id===currentPrintQuoteId);
+  const area = document.getElementById('quotePrintArea');
+  if(!q || !area) return;
+  const settings = getSettings();
+  const companyName = settings.companyName || 'Your Company';
+  const productsTotal = q.items.reduce((s,i)=> s + (i.qty*i.price), 0);
+  const chargesTotal = (q.charges||[]).reduce((s,c)=> s + c.amount, 0);
+
+  area.innerHTML = `
+    <div style="text-align:center;margin-bottom:20px;">
+      <h2 style="margin:0;">${escapeHtml(companyName)}</h2>
+      <p style="color:var(--gray);font-size:13px;">${escapeHtml(settings.address||'')}</p>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:13px;">
+      <div>
+        <strong>Quotation #:</strong> ${escapeHtml(q.quoteNumber)}<br>
+        <strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}<br>
+        <strong>Project Type:</strong> ${escapeHtml(q.projectType)}
+      </div>
+      <div style="text-align:right;">
+        <strong>Customer:</strong> ${escapeHtml(q.customerName)}<br>
+        ${q.customerPhone?`<strong>Phone:</strong> ${escapeHtml(q.customerPhone)}<br>`:''}
+        ${q.customerAddress?`<strong>Address:</strong> ${escapeHtml(q.customerAddress)}`:''}
+      </div>
+    </div>
+    <table style="width:100%;">
+      <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+      <tbody>
+        ${q.items.map(i=>`<tr><td>${escapeHtml(i.productName)}</td><td>${i.qty}</td><td>₱${i.price.toFixed(2)}</td><td>₱${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:14px;font-size:14px;">
+      <div style="display:flex;justify-content:space-between;"><span>Products Subtotal</span><span>₱${productsTotal.toFixed(2)}</span></div>
+      ${q.deliveryFee>0 ? `<div style="display:flex;justify-content:space-between;"><span>Delivery Fee</span><span>₱${q.deliveryFee.toFixed(2)}</span></div>` : ''}
+      ${(q.charges||[]).map(c=>`<div style="display:flex;justify-content:space-between;"><span>${escapeHtml(c.label)}</span><span>₱${c.amount.toFixed(2)}</span></div>`).join('')}
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:17px;border-top:2px solid var(--border);margin-top:8px;padding-top:8px;">
+        <span>Grand Total</span><span>₱${q.grandTotal.toFixed(2)}</span>
+      </div>
+    </div>
+    ${q.notes ? `<div style="margin-top:16px;font-size:13px;"><strong>Notes:</strong><br>${escapeHtml(q.notes)}</div>` : ''}
+    <div style="display:flex;justify-content:space-between;margin-top:60px;font-size:13px;">
+      <div style="text-align:center;width:45%;border-top:1px solid var(--black);padding-top:6px;">Authorized Signature</div>
+      <div style="text-align:center;width:45%;border-top:1px solid var(--black);padding-top:6px;">Customer Signature</div>
+    </div>
+  `;
+
+  const convertBtn = document.getElementById('convertQuoteBtn');
+  if(q.status==='converted'){
+    convertBtn.textContent = 'Already Converted to Sale';
+    convertBtn.disabled = true;
+  } else {
+    convertBtn.textContent = 'Convert to Sale';
+    convertBtn.disabled = false;
+  }
+}
+
+document.getElementById('convertQuoteBtn').addEventListener('click', ()=>{
+  const q = DB.getQuotations().find(x=>x.id===currentPrintQuoteId);
+  if(!q || q.status==='converted') return;
+
+  const products = DB.getProducts();
+  // Check stock availability for every item before changing anything.
+  for(const item of q.items){
+    const p = products.find(pr=>pr.id===item.productId);
+    if(!p || p.stock < item.qty){
+      alert('Insufficient stock available for: ' + (p ? p.name : 'a product in this quotation') + '. Please restock before converting this quotation to a sale.');
+      return;
+    }
+  }
+  if(!confirm('Convert this quotation into a completed sale? This will deduct stock and record the sale.')) return;
+
+  // Deduct stock
+  q.items.forEach(item=>{
+    const p = products.find(pr=>pr.id===item.productId);
+    p.stock -= item.qty;
+  });
+  DB.saveProducts(products);
+
+  // Record the sale
+  const sale = {
+    id: 'RCPT-' + Date.now().toString().slice(-8),
+    date: new Date().toISOString(),
+    items: q.items.map(i=>({ type:'product', refId:i.productId, name:i.productName, qty:i.qty, price:i.price, discount:0 })),
+    total: q.grandTotal,
+    cartDiscountPercent: 0,
+    paymentMethod: 'Quotation',
+    status: 'completed',
+    fromQuotationId: q.id,
+    customerName: q.customerName,
+  };
+  const sales = DB.getSales();
+  sales.unshift(sale);
+  DB.saveSales(sales);
+
+  // Mark quotation as converted
+  const quotes = DB.getQuotations();
+  const qq = quotes.find(x=>x.id===q.id);
+  qq.status = 'converted';
+  qq.saleId = sale.id;
+  DB.saveQuotations(quotes);
+
+  renderQuotePrint();
+  renderAll();
+  showToast('Quotation converted to sale.');
+
+  // Low stock check after deduction
+  q.items.forEach(item=>{
+    const p = products.find(pr=>pr.id===item.productId);
+    if(p && p.stock > 0 && p.stock <= (p.threshold||5)){
+      notifyUser('Low Stock Warning', `${p.name} is running low (${p.stock} left).`);
+    }
+  });
+});
+
 /* ============ HELPERS ============ */
 function escapeHtml(str){
   const div = document.createElement('div');
@@ -1881,10 +3005,13 @@ function escapeHtml(str){
 
 function renderAll(){
   renderDashboard();
+  try{ updateAdminNavVisibility(); }catch(e){}
   const prodEl = document.getElementById('productSearch');
   const servEl = document.getElementById('serviceSearch');
   const bookEl = document.getElementById('bookingSearch');
   const posEl = document.getElementById('posSearch');
+  const supEl = document.getElementById('supplierSearch');
+  const delEl = document.getElementById('deliverySearch');
   renderProducts(prodEl ? prodEl.value : '');
   renderServices(servEl ? servEl.value : '');
   renderBookings(bookEl ? bookEl.value : '');
@@ -1892,6 +3019,9 @@ function renderAll(){
   renderExpenses();
   renderHistory();
   renderCategoriesUI();
+  try{ renderSuppliers(supEl ? supEl.value : ''); }catch(e){}
+  try{ renderDeliveries(delEl ? delEl.value : ''); }catch(e){}
+  try{ const qEl = document.getElementById('quoteSearch'); renderQuotations(qEl ? qEl.value : ''); }catch(e){}
   try{ renderCalendar(calendarYear, calendarMonth); }catch(e){}
 }
 
@@ -2156,6 +3286,13 @@ try{ checkNotifications(); setInterval(checkNotifications, 5*60*1000); }catch(e)
 if(getCurrentUser()){
   pullDataFromServer().then(ok=>{
     if(ok){ renderAll(); renderCalendar(calendarYear, calendarMonth); }
+  });
+  // Refresh isAdmin status too, in case it changed on another device since last login.
+  apiFetch('/profile', { method:'GET' }).then(res=>{
+    if(res.ok && res.user){
+      const user = getCurrentUser();
+      if(user){ user.isAdmin = !!res.user.isAdmin; setCurrentUser(user); }
+    }
   });
 }
 </script>

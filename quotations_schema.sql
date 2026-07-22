@@ -1,0 +1,2 @@
+ALTER TABLE user_data
+  ADD COLUMN IF NOT EXISTS quotations JSONB NOT NULL DEFAULT '[]';
