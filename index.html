@@ -504,7 +504,7 @@
           <strong>Products</strong> tab and add the part used (e.g. "CPU") so it's deducted from stock automatically.
         </p>
         <table>
-          <thead><tr><th>Service Name</th><th>Description</th><th>Price</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Service Name</th><th>Description</th><th>Price</th><th>Home Service</th><th>Actions</th></tr></thead>
           <tbody id="servicesTable"></tbody>
         </table>
       </div>
@@ -608,11 +608,15 @@
     <div class="page" id="page-quotations">
       <div class="search-bar">
         <input type="text" id="quoteSearch" placeholder="Search quotations (customer, quote #)...">
+        <input type="date" id="quoteFromDate" title="From date">
+        <input type="date" id="quoteToDate" title="To date">
+        <button class="btn btn-outline no-print" onclick="window.print()">🖨 Print Records</button>
         <button class="btn btn-primary" id="addQuotationBtn">+ New Quotation</button>
       </div>
       <div class="panel">
+        <h2 class="no-print" style="margin-bottom:10px;">Quotation Records</h2>
         <table>
-          <thead><tr><th>Quote #</th><th>Date</th><th>Customer</th><th>Project Type</th><th>Grand Total</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Quote #</th><th>Date</th><th>Customer</th><th>Project Type</th><th>Grand Total</th><th>Status</th><th class="no-print">Actions</th></tr></thead>
           <tbody id="quotationsTable"></tbody>
         </table>
       </div>
@@ -623,6 +627,7 @@
       <div style="display:flex;gap:8px;margin-bottom:14px;" class="no-print">
         <button class="btn btn-outline btn-sm" id="backToQuotationsBtn">← Back to Quotations</button>
         <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+        <button class="btn btn-outline btn-sm" id="downloadQuoteWordBtn">⬇ Download as Word</button>
         <button class="btn btn-primary btn-sm" id="convertQuoteBtn">Convert to Sale</button>
       </div>
       <div class="panel" id="quotePrintArea" style="max-width:760px;margin:0 auto;">
@@ -656,6 +661,10 @@
         <div class="form-group">
           <label>Location / Address</label>
           <input type="text" id="setLocation">
+        </div>
+        <div class="form-group">
+          <label>Business Email</label>
+          <input type="email" id="setEmail" placeholder="e.g. sales@yourcompany.com">
         </div>
         <div class="form-group">
           <label>Company Logo (PNG/JPG)</label>
@@ -864,8 +873,15 @@
 <div class="modal-overlay" id="quoteModalOverlay">
   <div class="modal" style="max-width:680px;">
     <span class="modal-close" id="closeQuoteModal">✕</span>
-    <h2>New Quotation</h2>
+    <h2 id="quoteModalTitle">New Quotation</h2>
     <input type="hidden" id="editQuoteId">
+
+    <div class="form-group" id="quoteTemplateRow">
+      <label>Start from a saved template (optional)</label>
+      <select id="qTemplateSelect">
+        <option value="">-- Blank quotation --</option>
+      </select>
+    </div>
 
     <h3 style="font-size:14px;margin:14px 0 8px;">Customer Information</h3>
     <div class="form-grid">
@@ -903,9 +919,9 @@
       <input type="text" id="qCustomerAddress" placeholder="Optional">
     </div>
 
-    <h3 style="font-size:14px;margin:14px 0 8px;">Products</h3>
+    <h3 style="font-size:14px;margin:14px 0 8px;">Products &amp; Services</h3>
     <div id="qItemsList"></div>
-    <button type="button" class="btn btn-outline btn-sm" id="addQuoteItemBtn" style="margin-top:6px;">+ Add Product</button>
+    <button type="button" class="btn btn-outline btn-sm" id="addQuoteItemBtn" style="margin-top:6px;">+ Add Item</button>
 
     <h3 style="font-size:14px;margin:14px 0 8px;">Additional Charges</h3>
     <div class="form-group">
@@ -916,8 +932,21 @@
     <button type="button" class="btn btn-outline btn-sm" id="addQuoteChargeBtn" style="margin-top:6px;">+ Add Charge (installation, labor, etc.)</button>
 
     <div class="form-group" style="margin-top:14px;">
+      <label>Hidden Fee / Adjustment (₱) <span style="color:var(--gray);font-weight:400;">- added to total, never shown to the customer</span></label>
+      <input type="number" id="qHiddenFee" placeholder="0" step="0.01" value="0">
+    </div>
+
+    <div class="form-group">
       <label>Notes</label>
       <input type="text" id="qNotes" placeholder="e.g. 1 Year Warranty, Prices valid for 7 days">
+    </div>
+
+    <div class="form-group">
+      <label><input type="checkbox" id="qSaveAsTemplate"> Save this as a reusable template (e.g. "Pisonet 5 units")</label>
+    </div>
+    <div class="form-group" id="qTemplateNameRow" style="display:none;">
+      <label>Template Name</label>
+      <input type="text" id="qTemplateName" placeholder="e.g. Pisonet 5 units">
     </div>
 
     <div class="quote-total-row" style="text-align:right;font-weight:700;font-size:16px;margin:12px 0;">
@@ -944,6 +973,13 @@
     <div class="form-group">
       <label>Service Price / Labor Fee (₱)</label>
       <input type="number" id="sPrice" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="form-group">
+      <label>Home Service</label>
+      <select id="sHomeService">
+        <option value="No">No</option>
+        <option value="Yes">Yes</option>
+      </select>
     </div>
     <button class="btn btn-primary btn-block" id="saveServiceBtn">Save Service</button>
   </div>
@@ -1525,7 +1561,7 @@ function renderSupplierStats(){
   setText('statInventoryPurchasedMonth', monthItemsPurchased);
   setText('statTotalPurchaseCost', '₱' + totalPurchaseCost.toFixed(2));
 
-  const quotes = DB.getQuotations();
+  const quotes = DB.getQuotations().filter(q=>!q.isTemplate);
   const monthQuotes = quotes.filter(q=>{
     const qd = new Date(q.date);
     return qd.getMonth()===now.getMonth() && qd.getFullYear()===now.getFullYear();
@@ -1755,7 +1791,7 @@ function renderServices(filter=''){
   );
   const tbody = document.getElementById('servicesTable');
   if(services.length===0){
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--gray);">No services found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray);">No services found</td></tr>`;
     return;
   }
   tbody.innerHTML = services.map(s=>`
@@ -1763,6 +1799,7 @@ function renderServices(filter=''){
       <td>${escapeHtml(s.name)}</td>
       <td>${escapeHtml(s.description || '—')}</td>
       <td>₱${s.price.toFixed(2)}</td>
+      <td>${s.homeService==='Yes' ? '<span class="badge ok">Yes</span>' : '<span class="badge">No</span>'}</td>
       <td class="row-actions">
         <button class="btn btn-outline btn-sm" onclick="openEditService('${s.id}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteService('${s.id}')">Delete</button>
@@ -2284,6 +2321,7 @@ document.getElementById('addServiceBtn').addEventListener('click', ()=>{
   document.getElementById('sName').value = '';
   document.getElementById('sDescription').value = '';
   document.getElementById('sPrice').value = '';
+  document.getElementById('sHomeService').value = 'No';
   document.getElementById('serviceModalOverlay').classList.add('active');
 });
 
@@ -2297,6 +2335,7 @@ function openEditService(id){
   document.getElementById('sName').value = s.name;
   document.getElementById('sDescription').value = s.description || '';
   document.getElementById('sPrice').value = s.price;
+  document.getElementById('sHomeService').value = s.homeService || 'No';
   document.getElementById('serviceModalOverlay').classList.add('active');
 }
 
@@ -2312,14 +2351,15 @@ document.getElementById('saveServiceBtn').addEventListener('click', ()=>{
   const name = document.getElementById('sName').value.trim();
   const description = document.getElementById('sDescription').value.trim();
   const price = parseFloat(document.getElementById('sPrice').value);
+  const homeService = document.getElementById('sHomeService').value;
   if(!name || isNaN(price) || price < 0){ alert('Please fill in a valid service name and price.'); return; }
   let services = DB.getServices();
   if(!Array.isArray(services)) services = [];
   if(id){
     const s = services.find(sv=>sv.id===id);
-    if(s) Object.assign(s, {name, description, price});
+    if(s) Object.assign(s, {name, description, price, homeService});
   } else {
-    services.push({id:crypto.randomUUID(), name, description, price});
+    services.push({id:crypto.randomUUID(), name, description, price, homeService});
   }
   DB.saveServices(services);
   showToast('Service saved');
@@ -2683,15 +2723,21 @@ function nextQuoteNumber(){
 function renderQuotations(filter=''){
   const tbody = document.getElementById('quotationsTable');
   if(!tbody) return;
-  const quotes = DB.getQuotations()
+  const fromVal = document.getElementById('quoteFromDate')?.value;
+  const toVal = document.getElementById('quoteToDate')?.value;
+  let quotes = DB.getQuotations()
+    .filter(q=> !q.isTemplate)
     .slice()
     .sort((a,b)=> new Date(b.date) - new Date(a.date))
     .filter(q=>
       (q.quoteNumber||'').toLowerCase().includes(filter.toLowerCase()) ||
       (q.customerName||'').toLowerCase().includes(filter.toLowerCase())
     );
+  if(fromVal) quotes = quotes.filter(q=> new Date(q.date) >= new Date(fromVal));
+  if(toVal) quotes = quotes.filter(q=> new Date(q.date) <= new Date(toVal + 'T23:59:59'));
+
   if(quotes.length===0){
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--gray);">No quotations yet</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--gray);">No quotations found</td></tr>`;
     return;
   }
   tbody.innerHTML = quotes.map(q=>{
@@ -2703,7 +2749,7 @@ function renderQuotations(filter=''){
       <td>${escapeHtml(q.projectType||'')}</td>
       <td>₱${q.grandTotal.toFixed(2)}</td>
       <td>${statusBadge}</td>
-      <td class="row-actions">
+      <td class="row-actions no-print">
         <button class="btn btn-outline btn-sm" onclick="viewQuotePrint('${q.id}')">View / Print</button>
         ${q.status!=='converted' ? `<button class="btn btn-outline btn-sm" onclick="openEditQuote('${q.id}')">Edit</button>` : ''}
         <button class="btn btn-danger btn-sm" onclick="deleteQuote('${q.id}')">Delete</button>
@@ -2713,27 +2759,47 @@ function renderQuotations(filter=''){
 }
 
 document.getElementById('quoteSearch').addEventListener('input', e=> renderQuotations(e.target.value));
+document.getElementById('quoteFromDate').addEventListener('input', ()=> renderQuotations(document.getElementById('quoteSearch').value));
+document.getElementById('quoteToDate').addEventListener('input', ()=> renderQuotations(document.getElementById('quoteSearch').value));
 
 /* ---- product line items (pulled from Inventory, selling price not cost) ---- */
 function renderQuoteItemRows(){
   const container = document.getElementById('qItemsList');
   const products = DB.getProducts();
+  const services = DB.getServices();
   container.innerHTML = quoteItemRows.map((row, idx)=>`
-    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
-      <select class="qItemProduct" data-idx="${idx}" style="flex:2;">
-        <option value="">-- Select product --</option>
-        ${products.map(p=>`<option value="${p.id}" ${row.productId===p.id?'selected':''}>${escapeHtml(p.name)} (${p.stock} in stock)</option>`).join('')}
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap;">
+      <select class="qItemType" data-idx="${idx}" style="width:90px;">
+        <option value="product" ${row.type==='service'?'':'selected'}>Product</option>
+        <option value="service" ${row.type==='service'?'selected':''}>Service</option>
       </select>
-      <input type="number" class="qItemQty" data-idx="${idx}" placeholder="Qty" min="1" value="${row.qty||''}" style="width:70px;">
-      <input type="number" class="qItemPrice" data-idx="${idx}" placeholder="Unit price" min="0" step="0.01" value="${row.price||''}" style="width:100px;">
+      <select class="qItemRef" data-idx="${idx}" style="flex:2;min-width:160px;">
+        <option value="">-- Select ${row.type==='service'?'service':'product'} --</option>
+        ${row.type==='service'
+          ? services.map(s=>`<option value="${s.id}" ${row.refId===s.id?'selected':''}>${escapeHtml(s.name)}</option>`).join('')
+          : products.map(p=>`<option value="${p.id}" ${row.refId===p.id?'selected':''}>${escapeHtml(p.name)} (${p.stock} in stock)</option>`).join('')}
+      </select>
+      <input type="number" class="qItemQty" data-idx="${idx}" placeholder="Qty" min="1" value="${row.qty||''}" style="width:65px;">
+      <input type="number" class="qItemPrice" data-idx="${idx}" placeholder="Unit price" min="0" step="0.01" value="${row.price||''}" style="width:95px;">
+      <input type="text" class="qItemWarranty" data-idx="${idx}" placeholder="Warranty (e.g. 1 year)" value="${escapeHtml(row.warranty||'')}" style="width:130px;">
       <button type="button" class="btn btn-danger btn-sm" onclick="removeQuoteItemRow(${idx})">✕</button>
     </div>
   `).join('');
-  container.querySelectorAll('.qItemProduct').forEach(el=> el.addEventListener('change', e=>{
+
+  container.querySelectorAll('.qItemType').forEach(el=> el.addEventListener('change', e=>{
     const idx = e.target.dataset.idx;
-    quoteItemRows[idx].productId = e.target.value;
-    const p = DB.getProducts().find(pr=>pr.id===e.target.value);
-    if(p) quoteItemRows[idx].price = p.price;
+    quoteItemRows[idx].type = e.target.value;
+    quoteItemRows[idx].refId = '';
+    quoteItemRows[idx].price = 0;
+    renderQuoteItemRows();
+  }));
+  container.querySelectorAll('.qItemRef').forEach(el=> el.addEventListener('change', e=>{
+    const idx = e.target.dataset.idx;
+    quoteItemRows[idx].refId = e.target.value;
+    const type = quoteItemRows[idx].type || 'product';
+    const source = type==='service' ? services : products;
+    const item = source.find(x=>x.id===e.target.value);
+    if(item) quoteItemRows[idx].price = item.price;
     renderQuoteItemRows();
   }));
   container.querySelectorAll('.qItemQty').forEach(el=> el.addEventListener('input', e=>{
@@ -2744,11 +2810,14 @@ function renderQuoteItemRows(){
     quoteItemRows[e.target.dataset.idx].price = parseFloat(e.target.value)||0;
     updateQuoteGrandTotal();
   }));
+  container.querySelectorAll('.qItemWarranty').forEach(el=> el.addEventListener('input', e=>{
+    quoteItemRows[e.target.dataset.idx].warranty = e.target.value;
+  }));
   updateQuoteGrandTotal();
 }
 window.removeQuoteItemRow = function(idx){ quoteItemRows.splice(idx,1); renderQuoteItemRows(); };
 document.getElementById('addQuoteItemBtn').addEventListener('click', ()=>{
-  quoteItemRows.push({ productId:'', qty:1, price:0 });
+  quoteItemRows.push({ type:'product', refId:'', qty:1, price:0, warranty:'' });
   renderQuoteItemRows();
 });
 
@@ -2776,18 +2845,33 @@ document.getElementById('addQuoteChargeBtn').addEventListener('click', ()=>{
   renderQuoteChargeRows();
 });
 document.getElementById('qDeliveryFee').addEventListener('input', updateQuoteGrandTotal);
+document.getElementById('qHiddenFee').addEventListener('input', updateQuoteGrandTotal);
+document.getElementById('qSaveAsTemplate').addEventListener('change', e=>{
+  document.getElementById('qTemplateNameRow').style.display = e.target.checked ? '' : 'none';
+});
 
 function updateQuoteGrandTotal(){
-  const productsTotal = quoteItemRows.reduce((s,r)=> s + ((r.qty||0)*(r.price||0)), 0);
+  const itemsTotal = quoteItemRows.reduce((s,r)=> s + ((r.qty||0)*(r.price||0)), 0);
   const deliveryFee = parseFloat(document.getElementById('qDeliveryFee').value)||0;
   const chargesTotal = quoteChargeRows.reduce((s,r)=> s + (r.amount||0), 0);
-  const grand = productsTotal + deliveryFee + chargesTotal;
+  const hiddenFee = parseFloat(document.getElementById('qHiddenFee').value)||0;
+  const grand = itemsTotal + deliveryFee + chargesTotal + hiddenFee;
   const el = document.getElementById('qGrandTotal');
   if(el) el.textContent = '₱' + grand.toFixed(2);
   return grand;
 }
 
+function populateTemplateDropdown(){
+  const sel = document.getElementById('qTemplateSelect');
+  if(!sel) return;
+  const templates = DB.getQuotations().filter(q=>q.isTemplate);
+  sel.innerHTML = `<option value="">-- Blank quotation --</option>` +
+    templates.map(t=>`<option value="${t.id}">${escapeHtml(t.templateName||t.quoteNumber)}</option>`).join('');
+}
+
 document.getElementById('addQuotationBtn').addEventListener('click', ()=>{
+  document.getElementById('quoteModalTitle').textContent = 'New Quotation';
+  document.getElementById('quoteTemplateRow').style.display = '';
   document.getElementById('editQuoteId').value = '';
   document.getElementById('qCustomerName').value = '';
   document.getElementById('qCustomerPhone').value = '';
@@ -2795,18 +2879,45 @@ document.getElementById('addQuotationBtn').addEventListener('click', ()=>{
   document.getElementById('qCustomerAddress').value = '';
   document.getElementById('qProjectType').value = 'Personal Computer';
   document.getElementById('qDeliveryFee').value = '0';
+  document.getElementById('qHiddenFee').value = '0';
   document.getElementById('qNotes').value = '';
-  quoteItemRows = [{ productId:'', qty:1, price:0 }];
+  document.getElementById('qSaveAsTemplate').checked = false;
+  document.getElementById('qTemplateNameRow').style.display = 'none';
+  document.getElementById('qTemplateName').value = '';
+  document.getElementById('qTemplateSelect').value = '';
+  populateTemplateDropdown();
+  quoteItemRows = [{ type:'product', refId:'', qty:1, price:0, warranty:'' }];
   quoteChargeRows = [];
   renderQuoteItemRows();
   renderQuoteChargeRows();
   document.getElementById('quoteModalOverlay').classList.add('active');
 });
-document.getElementById('closeQuoteModal').addEventListener('click', ()=>{ document.getElementById('quoteModalOverlay').classList.remove('active'); });
+document.getElementById('closeQuoteModal').addEventListener('click', ()=>{
+  document.getElementById('quoteModalOverlay').classList.remove('active');
+  document.getElementById('quoteTemplateRow').style.display = '';
+});
+
+// Loading a template fills in the form but keeps it a NEW quotation (not
+// linked back to the template), so customer info can be typed in fresh.
+document.getElementById('qTemplateSelect').addEventListener('change', e=>{
+  const templateId = e.target.value;
+  if(!templateId) return;
+  const t = DB.getQuotations().find(x=>x.id===templateId);
+  if(!t) return;
+  document.getElementById('qProjectType').value = t.projectType||'Personal Computer';
+  document.getElementById('qDeliveryFee').value = t.deliveryFee||0;
+  document.getElementById('qHiddenFee').value = t.hiddenFee||0;
+  document.getElementById('qNotes').value = t.notes||'';
+  quoteItemRows = (t.items||[]).map(i=>({ type:i.type||'product', refId:i.refId||i.productId, qty:i.qty, price:i.price, warranty:i.warranty||'' }));
+  quoteChargeRows = (t.charges||[]).map(c=>({ label:c.label, amount:c.amount }));
+  renderQuoteItemRows();
+  renderQuoteChargeRows();
+});
 
 window.openEditQuote = function(id){
   const q = DB.getQuotations().find(x=>x.id===id);
   if(!q) return;
+  document.getElementById('quoteModalTitle').textContent = 'Edit Quotation';
   document.getElementById('editQuoteId').value = q.id;
   document.getElementById('qCustomerName').value = q.customerName||'';
   document.getElementById('qCustomerPhone').value = q.customerPhone||'';
@@ -2814,8 +2925,12 @@ window.openEditQuote = function(id){
   document.getElementById('qCustomerAddress').value = q.customerAddress||'';
   document.getElementById('qProjectType').value = q.projectType||'Personal Computer';
   document.getElementById('qDeliveryFee').value = q.deliveryFee||0;
+  document.getElementById('qHiddenFee').value = q.hiddenFee||0;
   document.getElementById('qNotes').value = q.notes||'';
-  quoteItemRows = (q.items||[]).map(i=>({ productId:i.productId, qty:i.qty, price:i.price }));
+  document.getElementById('qSaveAsTemplate').checked = false;
+  document.getElementById('qTemplateNameRow').style.display = 'none';
+  document.getElementById('quoteTemplateRow').style.display = 'none'; // don't offer template-load while editing an existing quote
+  quoteItemRows = (q.items||[]).map(i=>({ type:i.type||'product', refId:i.refId||i.productId, qty:i.qty, price:i.price, warranty:i.warranty||'' }));
   quoteChargeRows = (q.charges||[]).map(c=>({ label:c.label, amount:c.amount }));
   renderQuoteItemRows();
   renderQuoteChargeRows();
@@ -2825,15 +2940,18 @@ window.openEditQuote = function(id){
 document.getElementById('saveQuoteBtn').addEventListener('click', ()=>{
   const customerName = document.getElementById('qCustomerName').value.trim();
   if(!customerName){ alert('Please enter a customer name.'); return; }
-  const validItems = quoteItemRows.filter(r=> r.productId && r.qty>0);
-  if(validItems.length===0){ alert('Please add at least one product.'); return; }
+  const validItems = quoteItemRows.filter(r=> r.refId && r.qty>0);
+  if(validItems.length===0){ alert('Please add at least one product or service.'); return; }
 
   const products = DB.getProducts();
+  const services = DB.getServices();
   const items = validItems.map(r=>{
-    const p = products.find(pr=>pr.id===r.productId);
-    return { productId:r.productId, productName: p?p.name:'Unknown', qty:r.qty, price:r.price };
+    const source = r.type==='service' ? services : products;
+    const item = source.find(x=>x.id===r.refId);
+    return { type:r.type, refId:r.refId, productName: item?item.name:'Unknown', qty:r.qty, price:r.price, warranty:r.warranty||'' };
   });
   const deliveryFee = parseFloat(document.getElementById('qDeliveryFee').value)||0;
+  const hiddenFee = parseFloat(document.getElementById('qHiddenFee').value)||0;
   const charges = quoteChargeRows.filter(c=>c.label && c.amount>0);
   const grandTotal = updateQuoteGrandTotal();
 
@@ -2845,7 +2963,7 @@ document.getElementById('saveQuoteBtn').addEventListener('click', ()=>{
     customerEmail: document.getElementById('qCustomerEmail').value.trim(),
     customerAddress: document.getElementById('qCustomerAddress').value.trim(),
     projectType: document.getElementById('qProjectType').value,
-    items, deliveryFee, charges, grandTotal,
+    items, deliveryFee, hiddenFee, charges, grandTotal,
     notes: document.getElementById('qNotes').value.trim(),
   };
 
@@ -2853,12 +2971,22 @@ document.getElementById('saveQuoteBtn').addEventListener('click', ()=>{
     const q = quotes.find(x=>x.id===id);
     Object.assign(q, quoteData);
   } else {
-    quotes.push({ id: crypto.randomUUID(), quoteNumber: nextQuoteNumber(), date: new Date().toISOString(), status:'draft', ...quoteData });
+    quotes.push({ id: crypto.randomUUID(), quoteNumber: nextQuoteNumber(), date: new Date().toISOString(), status:'draft', isTemplate:false, ...quoteData });
   }
+
+  // Optionally also save a separate copy as a reusable template
+  const saveAsTemplate = document.getElementById('qSaveAsTemplate').checked;
+  if(saveAsTemplate){
+    const templateName = document.getElementById('qTemplateName').value.trim();
+    if(!templateName){ alert('Please enter a name for this template.'); return; }
+    quotes.push({ id: crypto.randomUUID(), quoteNumber: nextQuoteNumber(), date: new Date().toISOString(), status:'draft', isTemplate:true, templateName, ...quoteData, customerName:'', customerPhone:'', customerEmail:'', customerAddress:'' });
+  }
+
   DB.saveQuotations(quotes);
   document.getElementById('quoteModalOverlay').classList.remove('active');
+  document.getElementById('quoteTemplateRow').style.display = '';
   renderAll();
-  showToast('Quotation saved.');
+  showToast(saveAsTemplate ? 'Quotation saved, and template created.' : 'Quotation saved.');
 });
 
 window.deleteQuote = function(id){
@@ -2887,44 +3015,49 @@ function renderQuotePrint(){
   if(!q || !area) return;
   const settings = getSettings();
   const companyName = settings.companyName || 'Your Company';
-  const productsTotal = q.items.reduce((s,i)=> s + (i.qty*i.price), 0);
-  const chargesTotal = (q.charges||[]).reduce((s,c)=> s + c.amount, 0);
 
   area.innerHTML = `
-    <div style="text-align:center;margin-bottom:20px;">
-      <h2 style="margin:0;">${escapeHtml(companyName)}</h2>
-      <p style="color:var(--gray);font-size:13px;">${escapeHtml(settings.address||'')}</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+      <h1 style="margin:0;color:var(--blue);font-size:32px;line-height:1.1;">${escapeHtml(companyName)}</h1>
+      <div style="text-align:right;font-size:13px;">
+        <div>Quotation No: ${escapeHtml(q.quoteNumber)}</div>
+        <div>Date: ${new Date(q.date).toLocaleDateString()}</div>
+      </div>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:13px;">
-      <div>
-        <strong>Quotation #:</strong> ${escapeHtml(q.quoteNumber)}<br>
-        <strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}<br>
-        <strong>Project Type:</strong> ${escapeHtml(q.projectType)}
-      </div>
-      <div style="text-align:right;">
-        <strong>Customer:</strong> ${escapeHtml(q.customerName)}<br>
-        ${q.customerPhone?`<strong>Phone:</strong> ${escapeHtml(q.customerPhone)}<br>`:''}
-        ${q.customerAddress?`<strong>Address:</strong> ${escapeHtml(q.customerAddress)}`:''}
-      </div>
+    <div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">
+      <strong>PREPARED FOR: (${escapeHtml(q.projectType)})</strong>
+    </div>
+    <div style="font-size:13px;margin-bottom:16px;">
+      Client Name: ${escapeHtml(q.customerName)}<br>
+      Client Address: ${escapeHtml(q.customerAddress||'')}<br>
+      Client Email / Phone: ${escapeHtml(q.customerEmail||'')} ${q.customerPhone?('/ '+escapeHtml(q.customerPhone)):''}
     </div>
     <table style="width:100%;">
-      <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+      <thead>
+        <tr style="background:var(--blue);color:#fff;">
+          <th style="color:#fff;">PRODUCTS</th><th style="color:#fff;">WARRANTY</th><th style="color:#fff;">QTY</th>
+        </tr>
+      </thead>
       <tbody>
-        ${q.items.map(i=>`<tr><td>${escapeHtml(i.productName)}</td><td>${i.qty}</td><td>₱${i.price.toFixed(2)}</td><td>₱${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}
+        ${q.items.map(i=>`<tr><td>${escapeHtml(i.productName)}</td><td>${escapeHtml(i.warranty||'-')}</td><td>${i.qty}</td></tr>`).join('')}
       </tbody>
     </table>
-    <div style="margin-top:14px;font-size:14px;">
-      <div style="display:flex;justify-content:space-between;"><span>Products Subtotal</span><span>₱${productsTotal.toFixed(2)}</span></div>
-      ${q.deliveryFee>0 ? `<div style="display:flex;justify-content:space-between;"><span>Delivery Fee</span><span>₱${q.deliveryFee.toFixed(2)}</span></div>` : ''}
-      ${(q.charges||[]).map(c=>`<div style="display:flex;justify-content:space-between;"><span>${escapeHtml(c.label)}</span><span>₱${c.amount.toFixed(2)}</span></div>`).join('')}
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:17px;border-top:2px solid var(--border);margin-top:8px;padding-top:8px;">
-        <span>Grand Total</span><span>₱${q.grandTotal.toFixed(2)}</span>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+      <div style="display:flex;border:1px solid var(--border);">
+        <div style="padding:8px 16px;font-weight:700;">TOTAL</div>
+        <div style="padding:8px 16px;background:var(--blue);color:#fff;font-weight:700;">₱${q.grandTotal.toFixed(2)}</div>
       </div>
     </div>
-    ${q.notes ? `<div style="margin-top:16px;font-size:13px;"><strong>Notes:</strong><br>${escapeHtml(q.notes)}</div>` : ''}
-    <div style="display:flex;justify-content:space-between;margin-top:60px;font-size:13px;">
+    ${q.notes ? `<div style="margin-top:20px;font-size:13px;"><strong>NOTES:</strong><ul style="margin:6px 0 0 18px;">${q.notes.split(/[\n,]+/).filter(n=>n.trim()).map(n=>`<li>${escapeHtml(n.trim())}</li>`).join('')}</ul></div>` : ''}
+    <div style="display:flex;justify-content:space-between;margin-top:50px;font-size:13px;">
       <div style="text-align:center;width:45%;border-top:1px solid var(--black);padding-top:6px;">Authorized Signature</div>
       <div style="text-align:center;width:45%;border-top:1px solid var(--black);padding-top:6px;">Customer Signature</div>
+    </div>
+    <div style="background:var(--blue);color:#fff;text-align:center;font-style:italic;font-weight:700;padding:12px;margin-top:24px;">
+      "THANK YOU FOR YOUR TRUST"
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--gray);margin-top:14px;">
+      ${escapeHtml(companyName)}${settings.phone?' | '+escapeHtml(settings.phone):''}${settings.location?' | '+escapeHtml(settings.location):''}${settings.email?' | '+escapeHtml(settings.email):''}
     </div>
   `;
 
@@ -2938,14 +3071,97 @@ function renderQuotePrint(){
   }
 }
 
+/* ---- Download as Word (.doc) ----
+   Browsers can't generate real .docx files without a library, but Word
+   happily opens a specially-formatted HTML file saved with a .doc
+   extension - so we build the same layout as the print view as a
+   standalone HTML document and hand it to Word that way. No backend or
+   library needed. */
+function downloadQuoteAsWord(q){
+  const settings = getSettings();
+  const companyName = settings.companyName || 'Your Company';
+  const itemsRows = q.items.map(i=>`
+    <tr>
+      <td style="border:1px solid #ccc;padding:8px;">${escapeHtml(i.productName)}</td>
+      <td style="border:1px solid #ccc;padding:8px;">${escapeHtml(i.warranty||'-')}</td>
+      <td style="border:1px solid #ccc;padding:8px;text-align:center;">${i.qty}</td>
+    </tr>`).join('');
+  const notesHtml = q.notes
+    ? `<p><strong>NOTES:</strong></p><ul>${q.notes.split(/[\n,]+/).filter(n=>n.trim()).map(n=>`<li>${escapeHtml(n.trim())}</li>`).join('')}</ul>`
+    : '';
+  const footerLine = [companyName, settings.phone, settings.location, settings.email].filter(Boolean).map(escapeHtml).join(' | ');
+
+  const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>${escapeHtml(q.quoteNumber)}</title></head>
+<body style="font-family:Calibri,Arial,sans-serif;">
+  <table style="width:100%;border:none;margin-bottom:20px;">
+    <tr>
+      <td style="border:none;"><h1 style="color:#1d5fd6;font-size:32px;margin:0;">${escapeHtml(companyName)}</h1></td>
+      <td style="border:none;text-align:right;font-size:13px;">Quotation No: ${escapeHtml(q.quoteNumber)}<br>Date: ${new Date(q.date).toLocaleDateString()}</td>
+    </tr>
+  </table>
+  <p style="border-bottom:1px solid #ccc;padding-bottom:8px;"><strong>PREPARED FOR: (${escapeHtml(q.projectType)})</strong></p>
+  <p style="font-size:13px;">
+    Client Name: ${escapeHtml(q.customerName)}<br>
+    Client Address: ${escapeHtml(q.customerAddress||'')}<br>
+    Client Email / Phone: ${escapeHtml(q.customerEmail||'')} ${q.customerPhone?('/ '+escapeHtml(q.customerPhone)):''}
+  </p>
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="background:#1d5fd6;color:#fff;">
+        <th style="border:1px solid #ccc;padding:8px;color:#fff;">PRODUCTS</th>
+        <th style="border:1px solid #ccc;padding:8px;color:#fff;">WARRANTY</th>
+        <th style="border:1px solid #ccc;padding:8px;color:#fff;">QTY</th>
+      </tr>
+    </thead>
+    <tbody>${itemsRows}</tbody>
+  </table>
+  <table style="margin-top:10px;margin-left:auto;border:1px solid #ccc;">
+    <tr>
+      <td style="border:none;padding:8px 16px;font-weight:bold;">TOTAL</td>
+      <td style="border:none;padding:8px 16px;background:#1d5fd6;color:#fff;font-weight:bold;">₱${q.grandTotal.toFixed(2)}</td>
+    </tr>
+  </table>
+  ${notesHtml}
+  <table style="width:100%;border:none;margin-top:60px;font-size:13px;">
+    <tr>
+      <td style="border:none;border-top:1px solid #000;text-align:center;padding-top:6px;width:45%;">Authorized Signature</td>
+      <td style="border:none;width:10%;"></td>
+      <td style="border:none;border-top:1px solid #000;text-align:center;padding-top:6px;width:45%;">Customer Signature</td>
+    </tr>
+  </table>
+  <p style="background:#1d5fd6;color:#fff;text-align:center;font-style:italic;font-weight:bold;padding:12px;margin-top:24px;">"THANK YOU FOR YOUR TRUST"</p>
+  <p style="text-align:center;font-size:11px;color:#666;">${footerLine}</p>
+</body>
+</html>`;
+
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Quotation-${q.quoteNumber}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('downloadQuoteWordBtn').addEventListener('click', ()=>{
+  const q = DB.getQuotations().find(x=>x.id===currentPrintQuoteId);
+  if(!q) return;
+  downloadQuoteAsWord(q);
+});
+
 document.getElementById('convertQuoteBtn').addEventListener('click', ()=>{
   const q = DB.getQuotations().find(x=>x.id===currentPrintQuoteId);
   if(!q || q.status==='converted') return;
 
   const products = DB.getProducts();
-  // Check stock availability for every item before changing anything.
-  for(const item of q.items){
-    const p = products.find(pr=>pr.id===item.productId);
+  const productItems = q.items.filter(i=> (i.type||'product')==='product');
+  // Check stock availability for every product item before changing anything (services don't consume stock).
+  for(const item of productItems){
+    const p = products.find(pr=>pr.id===item.refId);
     if(!p || p.stock < item.qty){
       alert('Insufficient stock available for: ' + (p ? p.name : 'a product in this quotation') + '. Please restock before converting this quotation to a sale.');
       return;
@@ -2953,9 +3169,9 @@ document.getElementById('convertQuoteBtn').addEventListener('click', ()=>{
   }
   if(!confirm('Convert this quotation into a completed sale? This will deduct stock and record the sale.')) return;
 
-  // Deduct stock
-  q.items.forEach(item=>{
-    const p = products.find(pr=>pr.id===item.productId);
+  // Deduct stock (products only)
+  productItems.forEach(item=>{
+    const p = products.find(pr=>pr.id===item.refId);
     p.stock -= item.qty;
   });
   DB.saveProducts(products);
@@ -2964,7 +3180,7 @@ document.getElementById('convertQuoteBtn').addEventListener('click', ()=>{
   const sale = {
     id: 'RCPT-' + Date.now().toString().slice(-8),
     date: new Date().toISOString(),
-    items: q.items.map(i=>({ type:'product', refId:i.productId, name:i.productName, qty:i.qty, price:i.price, discount:0 })),
+    items: q.items.map(i=>({ type:i.type||'product', refId:i.refId, name:i.productName, qty:i.qty, price:i.price, discount:0 })),
     total: q.grandTotal,
     cartDiscountPercent: 0,
     paymentMethod: 'Quotation',
@@ -2987,9 +3203,9 @@ document.getElementById('convertQuoteBtn').addEventListener('click', ()=>{
   renderAll();
   showToast('Quotation converted to sale.');
 
-  // Low stock check after deduction
-  q.items.forEach(item=>{
-    const p = products.find(pr=>pr.id===item.productId);
+  // Low stock check after deduction (products only)
+  productItems.forEach(item=>{
+    const p = products.find(pr=>pr.id===item.refId);
     if(p && p.stock > 0 && p.stock <= (p.threshold||5)){
       notifyUser('Low Stock Warning', `${p.name} is running low (${p.stock} left).`);
     }
@@ -3127,6 +3343,7 @@ function loadSettingsToForm(){
   document.getElementById('setCompanyName').value = s.companyName || '';
   document.getElementById('setPhone').value = s.phone || '';
   document.getElementById('setLocation').value = s.location || '';
+  document.getElementById('setEmail').value = s.email || '';
   document.getElementById('setThemeMode').value = s.themeMode || 'light';
   document.getElementById('setThemePreset').value = s.preset || 'blue';
   document.getElementById('setAccentColor').value = s.accent || '#1d5fd6';
@@ -3140,6 +3357,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
   s.companyName = document.getElementById('setCompanyName').value.trim();
   s.phone = document.getElementById('setPhone').value.trim();
   s.location = document.getElementById('setLocation').value.trim();
+  s.email = document.getElementById('setEmail').value.trim();
   saveSettings(s);
   updateAuthUI();
   showToast('Company info saved');
